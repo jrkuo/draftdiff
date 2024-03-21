@@ -1,0 +1,49 @@
+[tool.poetry]
+name = "draftdiff"
+version = "0.1.0"
+description = "creating dota2 counterpicker"
+authors = ["Jeff", "Luke"]
+license = "MIT"
+readme = "README.md"
+packages = [
+    { include = "src", from = "." }
+]
+
+[tool.poetry.dependencies]
+python = "3.12.2"
+beautifulsoup4 = "^4.12.3"
+pandas = "^2.2.1"
+loguru = "^0.7.2"
+tqdm = "^4.66.2"
+requests = "^2.31.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+select = [
+    "I"
+]
+src = ["src"]
+
+[tool.black]
+line-length = 75
+target-version = ['py38']
+include = '\.pyi?$'
+exclude = '''
+
+/(
+    \.eggs         # exclude a few common directories in the
+  | \.git          # root of the project
+  | \.hg
+  | \.mypy_cache
+  | \.nox
+  | \.tox
+  | \.venv
+  | _build
+  | build
+  | dist
+)/
+
+'''
