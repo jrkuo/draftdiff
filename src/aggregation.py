@@ -97,6 +97,10 @@ def build_counter_df():
     )
 
 
+def databricks_print_test():
+    print("draftdiff imported")
+
+
 def main():
     import doctest
 
