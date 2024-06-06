@@ -1,10 +1,9 @@
 import os
 
 import pandas as pd
+from draftdiff import aggregation
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-
-import aggregation
 
 
 def write_to_google_sheets(df, spreadsheet_id, sheet_name, start_cell, key_file_path):

@@ -1,9 +1,7 @@
 import os
 
 import pandas as pd
-
-import dotabuff
-import stratz
+from draftdiff import dotabuff, stratz
 
 
 def build_target_heroes_counter_heroes_df_for_dotabuff_id_in_last_n_days(
