@@ -3,6 +3,7 @@ import os
 
 import pandas as pd
 import requests
+from draftdiff import constants
 from loguru import logger
 
 # def get_stratz_slug_for_dota_hero(hero_name) -> str:
@@ -33,23 +34,23 @@ from loguru import logger
 #             return match_page_text
 
 
-def create_stratz_hero_name_id_dict() -> dict:
-    with open(f"./data/stratzheroes.html", "r") as rf:
-        html = rf.read()
-        hero_id_dict = {}
-        hero_id_name = html.split("/heroes/")[15:263]
-        for i in range(0, len(hero_id_name), 2):
-            hero_id_name[i] = hero_id_name[i].split('"')[0]
-        for i in range(1, len(hero_id_name), 2):
-            hero_id_name[i] = hero_id_name[i].split('"')[2]
-        for i in range(0, len(hero_id_name), 2):
-            hero_id_dict[hero_id_name[i + 1]] = hero_id_name[i]
+# def create_stratz_hero_name_id_dict() -> dict:
+#     with open(f"./data/stratzheroes.html", "r") as rf:
+#         html = rf.read()
+#         hero_id_dict = {}
+#         hero_id_name = html.split("/heroes/")[15:263]
+#         for i in range(0, len(hero_id_name), 2):
+#             hero_id_name[i] = hero_id_name[i].split('"')[0]
+#         for i in range(1, len(hero_id_name), 2):
+#             hero_id_name[i] = hero_id_name[i].split('"')[2]
+#         for i in range(0, len(hero_id_name), 2):
+#             hero_id_dict[hero_id_name[i + 1]] = hero_id_name[i]
 
-    return hero_id_dict
+#     return hero_id_dict
 
 
-hero_id_dict = create_stratz_hero_name_id_dict()
-id_hero_dict = {v: k for k, v in hero_id_dict.items()}
+hero_id_dict = constants.hero_id_dict
+id_hero_dict = constants.id_hero_dict
 
 
 def get_matchup_stats_for_hero_name(token, hero_name) -> dict:
