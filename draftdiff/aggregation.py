@@ -22,7 +22,10 @@ def build_target_heroes_counter_heroes_df_for_dotabuff_id_in_last_n_days2(
         )
         dotabuff_counter_dfs = {}
         stratz_counter_dfs = {}
-        for index, row in tqdm(df_hero_stats_for_player_id.iterrows()):
+        for index, row in tqdm(
+            df_hero_stats_for_player_id.iterrows(),
+            total=df_hero_stats_for_player_id.shape[0],
+        ):
             hero_name = row["hero"]
             if hero_name in dotabuff_counter_dfs:
                 continue

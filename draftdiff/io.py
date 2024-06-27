@@ -9,7 +9,7 @@ import boto3
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-from draftdiff import writetosheets
+from draftdiff import util, writetosheets
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from loguru import logger
@@ -30,6 +30,29 @@ def get_io_location() -> IOLocation:
         return IOLocation.S3
     else:
         raise ValueError(f"unexpected env: {os.environ['IO_LOCATION']}")
+
+
+def get_file_paths(data_path):
+    io_location = get_io_location()
+    file_paths = []
+    match io_location:
+        case IOLocation.LOCAL:
+            folder_path = f"./data/{data_path}"
+            for item in os.listdir(folder_path):
+                item_path = os.path.join(folder_path, item)
+                if os.path.isdir(item_path):
+                    file_paths.append(item_path.replace("./data/", "", 1))
+        case IOLocation.SHEETS:
+            raise ValueError("cannot get file paths from sheets")
+        case IOLocation.S3:
+            folder_location = f"{data_path}"
+            paginator = boto3.client("s3").get_paginator("list_objects_v2")
+            pages = paginator.paginate(Bucket="draftdiff", Prefix=folder_location)
+            for page in pages:
+                if "Contents" in page:
+                    for obj in page["Contents"]:
+                        file_paths.append(obj["Key"][:-10])
+    return file_paths
 
 
 def read_html(data_partition: str):
@@ -188,5 +211,18 @@ def test():
     return
 
 
+def test2():
+    os.environ["IO_LOCATION"] = "local"
+    ds = util.get_current_ds()
+    player_id = "181567803"
+    n = 30
+    data_path = f"dotabuff/ds={ds}/player_id={player_id}/days={n}"
+    file_paths = get_file_paths(data_path)
+
+    os.environ["IO_LOCATION"] = "s3"
+    file_paths2 = get_file_paths(data_path)
+    return
+
+
 if __name__ == "__main__":
-    test()
+    test2()
