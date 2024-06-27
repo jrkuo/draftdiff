@@ -17,7 +17,6 @@ from tqdm import tqdm
 
 local_DS = constants.local_DS
 local_DS_date = constants.local_DS_date
-current_env = os.environ["ENV"]
 
 
 def get_dotabuff_match_page_text_for_player_id(

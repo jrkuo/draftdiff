@@ -13,7 +13,6 @@ from tqdm import tqdm
 hero_id_dict = constants.hero_id_dict
 id_hero_dict = constants.id_hero_dict
 local_DS_date = constants.local_DS_date
-current_env = os.environ["ENV"]
 
 
 def get_matchup_stats_for_hero_name(token, hero_name) -> dict:
