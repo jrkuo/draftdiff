@@ -4,7 +4,7 @@ local_DS = datetime(year=2024, month=6, day=11)
 local_DS_date = local_DS.date()
 
 
-hero_id_dict = {
+HERO_ID_DICT = {
     "Alchemist": "73",
     "Axe": "2",
     "Bristleback": "99",
@@ -131,4 +131,4 @@ hero_id_dict = {
     "Winter Wyvern": "112",
 }
 
-id_hero_dict = {v: k for k, v in hero_id_dict.items()}
+ID_HERO_DICT = {v: k for k, v in HERO_ID_DICT.items()}

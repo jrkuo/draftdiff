@@ -6,12 +6,39 @@
     "configurations": [
         {
             "name": "Python: Current File",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Main",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "draftdiff.main",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": []
+        },
+        {
+            "name": "S3 IO location",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "draftdiff.main",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": ["-i", "s3", "-p", "181567803"]
+        },
+        {
+            "name": "Local IO location",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "draftdiff.main",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": ["-i", "local", "-p", "181567803"]
         }
     ]
 }

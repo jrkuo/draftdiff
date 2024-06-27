@@ -10,13 +10,13 @@ from draftdiff import constants, io, util
 from loguru import logger
 from tqdm import tqdm
 
-hero_id_dict = constants.hero_id_dict
-id_hero_dict = constants.id_hero_dict
+HERO_ID_DICT = constants.HERO_ID_DICT
+ID_HERO_DICT = constants.ID_HERO_DICT
 local_DS_date = constants.local_DS_date
 
 
 def get_matchup_stats_for_hero_name(token, hero_name) -> dict:
-    heroid = hero_id_dict[hero_name]
+    heroid = HERO_ID_DICT[hero_name]
     url = "https://api.stratz.com/graphql"
 
     # Define headers if needed
@@ -125,7 +125,7 @@ def build_stratz_stats_df(match_page_data) -> pd.DataFrame:
     ]["vs"]:
         new_records += [
             {
-                "counter_hero": id_hero_dict[str(row["heroId2"])],
+                "counter_hero": ID_HERO_DICT[str(row["heroId2"])],
                 "target_disadvantage": float(-row["synergy"]),
                 "target_winrate_vs_counter": float(
                     (row["winCount"] / row["matchCount"]) * 100
@@ -162,7 +162,7 @@ def get_cached_hero_counters_for_hero_name(ds, hero_name) -> pd.DataFrame:
 def main():
     # learn about curried functions later
     ds = util.get_current_ds()
-    hero_list = list(constants.hero_id_dict.keys())
+    hero_list = list(constants.HERO_ID_DICT.keys())
     for hero_name in tqdm(hero_list):
         get_cached_matchup_stats(
             ds=ds, token=os.environ["STRATZ_API_TOKEN"], hero_name=hero_name

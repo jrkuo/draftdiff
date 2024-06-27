@@ -152,12 +152,8 @@ def get_cached_heroes_stats_for_dotabuff_id_in_last_n_days(
         logger.info(
             f"[{io.get_io_location()}] Running making df from html for player {player_id} for last {n} days"
         )
-        base_directory = f"./data/dotabuff/ds={ds}/player_id={player_id}/days={n}"
-        file_paths = []
-        for item in os.listdir(base_directory):
-            item_path = os.path.join(base_directory, item)
-            if os.path.isdir(item_path):
-                file_paths.append(item_path.replace("./data/", "", 1))
+        base_directory = f"dotabuff/ds={ds}/player_id={player_id}/days={n}"
+        file_paths = io.get_file_paths(base_directory)
         all_records = []
         for file_path in file_paths:
             match_page_data = io.read_html(file_path)
