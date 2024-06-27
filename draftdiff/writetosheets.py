@@ -6,6 +6,27 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
 
+def read_from_google_sheets(spreadsheet_id, sheet_name, key_file_path) -> pd.DataFrame:
+    SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+
+    # Authenticate using the service account credentials
+    credentials = service_account.Credentials.from_service_account_file(
+        key_file_path, scopes=SCOPES
+    )
+    service = build("sheets", "v4", credentials=credentials)
+    sheet = service.spreadsheets()
+    result = (
+        sheet.values().get(spreadsheetId=spreadsheet_id, range=sheet_name).execute()
+    )
+    values = result.get("values", [])
+    if not values:
+        print("No data found.")
+        return pd.DataFrame()
+    else:
+        df = pd.DataFrame(values)
+        return df
+
+
 def write_to_google_sheets(df, spreadsheet_id, sheet_name, start_cell, key_file_path):
     """
     Write a Pandas DataFrame to a Google Sheet.

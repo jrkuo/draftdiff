@@ -1,14 +1,23 @@
+import glob
 import json
+import os
 import re
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 
+import boto3
 import pandas as pd
 import requests
+from botocore.exceptions import NoCredentialsError, PartialCredentialsError
 from bs4 import BeautifulSoup
+from draftdiff import constants, io, util
 from loguru import logger
 from tqdm import tqdm
+
+local_DS = constants.local_DS
+local_DS_date = constants.local_DS_date
+current_env = os.environ["ENV"]
 
 
 def get_dotabuff_match_page_text_for_player_id(
@@ -26,26 +35,46 @@ def get_dotabuff_match_page_text_for_player_id(
     return response.text
 
 
-def get_cached_dotabuff_match_page(dotabuff_player_id, match_page_num) -> str:
-    try:
-        with open(
-            f"./data/dotabuff-{dotabuff_player_id}-{match_page_num}.html", "rb"
-        ) as rf:
-            logger.info(f"using local data for player {dotabuff_player_id}")
-            html_text = rf.read().decode("utf-8")
-            return html_text
-    except FileNotFoundError:
-        with open(
-            f"./data/dotabuff-{dotabuff_player_id}-{match_page_num}.html", "wb"
-        ) as wf:
+def get_cached_dotabuff_match_pages_for_past_n_days(ds, dotabuff_player_id, n):
+    match_page_num = 1
+    earliest_difference_in_days = 0
+
+    while earliest_difference_in_days <= n:
+        partition_path = f"dotabuff/ds={ds}/player_id={dotabuff_player_id}/days={n}/page-{match_page_num}"
+        try:
+            match_page_text = io.read_html(partition_path)
+            logger.info(
+                f"[{io.get_io_location()}] loaded cached data from {partition_path}"
+            )
+        except Exception:
+            if ds != util.get_current_ds():
+                raise ValueError(
+                    "Cannot run webscraping functions in the past. Can only run transforms on past data"
+                )
+            logger.warning(
+                f"[{io.get_io_location()}] Running expensive match page function for player {dotabuff_player_id}"
+            )
             match_page_text = get_dotabuff_match_page_text_for_player_id(
                 dotabuff_player_id, match_page_num
             )
-            wf.write(match_page_text.encode())
-            return match_page_text
+            io.write_html_to_html(match_page_text, partition_path)
+        soup = BeautifulSoup(match_page_text, "html.parser")
+        tables = soup.find_all("table")
+        table = tables[0]
+        tr = table.find_all("tr")
+        last_row = tr[-1]
+        last_data_vals = last_row.find_all("td")
+        hero, matchid, role, result, type, duration, kda, items = last_data_vals
+        last_date_on_page = result.find("time").get_text()
+        last_date_on_page = datetime.strptime(last_date_on_page, "%Y-%m-%d")
+        earliest_date_difference = datetime.strptime(ds, "%Y-%m-%d") - last_date_on_page
+        earliest_difference_in_days = earliest_date_difference.days
+        match_page_num += 1
+    logger.info(f"finished downloading match pages for player {dotabuff_player_id}")
+    return
 
 
-def build_dotabuff_player_stats_from_match_page_text(html_text) -> list:
+def build_dotabuff_player_stats_from_match_page_text(html_text) -> pd.DataFrame:
     new_records = []
     soup = BeautifulSoup(html_text, "html.parser")
 
@@ -78,7 +107,8 @@ def build_dotabuff_player_stats_from_match_page_text(html_text) -> list:
             }
         ]
         print(hero_name)
-    return new_records
+    df = pd.json_normalize(new_records)
+    return df
 
 
 def get_filtered_df_with_rows_within_n_days(df, n) -> pd.DataFrame:
@@ -112,33 +142,36 @@ def agg_df_get_winrate_by_hero_role_lane(df) -> pd.DataFrame:
     return pd.json_normalize(new_records)
 
 
-def get_heroes_stats_for_dotabuff_id_in_last_n_days(player_id, n) -> pd.DataFrame:
-    logger.info("get_dotabuff_match_page_text_for_player_id")
-    matches_page_num = 0
-    new_records = []
-    current_date_time = datetime.now()
-    earliest_difference_in_days = 0
-
-    while earliest_difference_in_days <= n:
-        # Keep downloading new pages and append to new_records
-        matches_page_num += 1
-        html_text = get_dotabuff_match_page_text_for_player_id(
-            player_id, matches_page_num
+def get_cached_heroes_stats_for_dotabuff_id_in_last_n_days(
+    ds, player_id, n
+) -> pd.DataFrame:
+    partition_path = f"dotabuff/player_stats-df/ds={ds}/player_id={player_id}/days={n}"
+    try:
+        player_stats_df = io.read_df(partition_path)
+        logger.info(f"[{io.get_io_location()}] loaded cached df from {partition_path}")
+    except Exception:
+        logger.info(
+            f"[{io.get_io_location()}] Running making df from html for player {player_id} for last {n} days"
         )
-        new_records += build_dotabuff_player_stats_from_match_page_text(html_text)
-        last_date_on_page = datetime.strptime(
-            new_records[-1]["date_played"], "%Y-%m-%d"
-        )
-        earliest_date_difference = current_date_time - last_date_on_page
-        earliest_difference_in_days = earliest_date_difference.days
-    logger.info("finished downloading match pages")
-
-    df_output = pd.json_normalize(new_records)
-
-    filtered_df = get_filtered_df_with_rows_within_n_days(df_output, n)
-    df_calculated_stats = agg_df_get_winrate_by_hero_role_lane(filtered_df)
-    df_calculated_stats.loc[:, "dotabuff_player_id"] = player_id
-    return df_calculated_stats
+        base_directory = f"./data/dotabuff/ds={ds}/player_id={player_id}/days={n}"
+        file_paths = []
+        for item in os.listdir(base_directory):
+            item_path = os.path.join(base_directory, item)
+            if os.path.isdir(item_path):
+                file_paths.append(item_path.replace("./data/", "", 1))
+        all_records = []
+        for file_path in file_paths:
+            match_page_data = io.read_html(file_path)
+            match_page_df = build_dotabuff_player_stats_from_match_page_text(
+                match_page_data
+            )
+            all_records.append(match_page_df)
+        df_output = pd.concat(all_records, ignore_index=True)
+        filtered_df = get_filtered_df_with_rows_within_n_days(df_output, n)
+        player_stats_df = agg_df_get_winrate_by_hero_role_lane(filtered_df)
+        player_stats_df.loc[:, "dotabuff_player_id"] = player_id
+        io.write_df_to_df(player_stats_df, partition_path)
+    return player_stats_df
 
 
 def get_dotabuff_slug_for_dota_hero(hero_name) -> str:
@@ -146,7 +179,7 @@ def get_dotabuff_slug_for_dota_hero(hero_name) -> str:
     return slug
 
 
-def get_dotabuff_counters_page_for_hero_name(hero_name) -> str:
+def get_counters_page_for_hero_name(hero_name) -> str:
     headers = {"User-Agent": "Mozilla/5.0"}
     logger.warning(f"downloading dotabuff {hero_name} counters page")
     dotabuff_hero_slug = get_dotabuff_slug_for_dota_hero(hero_name)
@@ -157,21 +190,77 @@ def get_dotabuff_counters_page_for_hero_name(hero_name) -> str:
     return response.text
 
 
-def get_cached_dotabuff_counters_page(hero_name) -> str:
+def get_cached_counters_page(ds, hero_name) -> str:
     dotabuff_hero_slug = get_dotabuff_slug_for_dota_hero(hero_name)
+    partition_path = f"dotabuff/matchups/ds={ds}/hero={dotabuff_hero_slug}"
     try:
-        with open(f"./data/dotabuff-{dotabuff_hero_slug}-counters.html", "rb") as rf:
-            logger.info(f"using local data for {dotabuff_hero_slug}")
-            html_text = rf.read().decode("utf-8")
-            return html_text
-    except FileNotFoundError:
-        with open(f"./data/dotabuff-{dotabuff_hero_slug}-counters.html", "wb") as wf:
-            match_page_text = get_dotabuff_counters_page_for_hero_name(hero_name)
-            wf.write(match_page_text.encode())
-            return match_page_text
+        match_page_data = io.read_html(partition_path)
+        logger.info(
+            f"[{io.get_io_location()}] loaded cached data from {partition_path}"
+        )
+    except Exception:
+        if ds != util.get_current_ds():
+            raise ValueError(
+                "Cannot run webscraping functions in the past. Can only run transforms on past data"
+            )
+        logger.warning(
+            f"[{io.get_io_location()}] Running expensive matchup stats function for {hero_name}"
+        )
+        match_page_data = get_counters_page_for_hero_name(hero_name)
+        io.write_html_to_html(match_page_data, partition_path)
+    return match_page_data
 
 
-def build_dotabuff_counter_stats_from_hero_page_text(html_text) -> list:
+def test():
+    os.environ["IO_LOCATION"] = "local"
+
+    get_cached_counters_page(
+        ds=util.get_current_ds(),
+        hero_name="Arc Warden",
+    )
+
+    os.environ["IO_LOCATION"] = "s3"
+
+    get_cached_counters_page(
+        ds=util.get_current_ds(),
+        hero_name="Arc Warden",
+    )
+
+    return
+
+
+def test2():
+    os.environ["IO_LOCATION"] = "local"
+    get_cached_heroes_stats_for_dotabuff_id_in_last_n_days(
+        ds=util.get_current_ds(), player_id="181567803", n=30
+    )
+
+    os.environ["IO_LOCATION"] = "s3"
+    get_cached_heroes_stats_for_dotabuff_id_in_last_n_days(
+        ds=util.get_current_ds(), player_id="181567803", n=30
+    )
+
+    return
+
+
+def test3():
+    os.environ["IO_LOCATION"] = "local"
+    get_cached_dotabuff_match_pages_for_past_n_days(
+        ds=util.get_current_ds(), dotabuff_player_id="181567803", n=30
+    )
+
+    return
+
+
+def test4():
+    os.environ["IO_LOCATION"] = "local"
+    get_cached_heroes_stats_for_dotabuff_id_in_last_n_days(
+        ds=util.get_current_ds(), player_id="181567803", n=30
+    )
+    return
+
+
+def build_dotabuff_counter_stats_from_hero_page_text(html_text) -> pd.DataFrame:
     new_records = []
     soup = BeautifulSoup(html_text, "html.parser")
 
@@ -205,19 +294,44 @@ def build_dotabuff_counter_stats_from_hero_page_text(html_text) -> list:
                 "source": "dotabuff",
             }
         ]
-    return new_records
-
-
-def get_dotabuff_hero_counters_for_hero(hero_name) -> pd.DataFrame:
-    html_text = get_dotabuff_counters_page_for_hero_name(hero_name)
-    new_records = build_dotabuff_counter_stats_from_hero_page_text(html_text)
     df_output = pd.json_normalize(new_records)
     return df_output
 
 
+def get_cached_hero_counters_for_hero(ds, hero_name) -> pd.DataFrame:
+    dotabuff_hero_slug = get_dotabuff_slug_for_dota_hero(hero_name)
+    partition_path = f"dotabuff/matchups-df/ds={ds}/hero={dotabuff_hero_slug}"
+    try:
+        match_page_df = io.read_df(partition_path)
+        logger.info(f"[{io.get_io_location()}] loaded cached df from {partition_path}")
+    except Exception:
+        logger.info(
+            f"[{io.get_io_location()}] Running making df from html for {hero_name}"
+        )
+        match_page_data = io.read_html(
+            f"dotabuff/matchups/ds={ds}/hero={dotabuff_hero_slug}"
+        )
+        match_page_df = build_dotabuff_counter_stats_from_hero_page_text(
+            match_page_data
+        )
+        io.write_df_to_df(match_page_df, partition_path)
+    return match_page_df
+
+
 def main():
     # build connections to external services (e.g. supabase, chrome browser, login w/ secrets)
-    get_dotabuff_hero_counters_for_hero("Arc Warden")
+    ds = util.get_current_ds()
+    player_id_list = ["181567803"]
+    n = 30
+    hero_list = list(constants.hero_id_dict.keys())
+    for hero_name in tqdm(hero_list):
+        get_cached_counters_page(ds=ds, hero_name=hero_name)
+        get_cached_hero_counters_for_hero(ds=ds, hero_name=hero_name)
+    for id in tqdm(player_id_list):
+        get_cached_dotabuff_match_pages_for_past_n_days(
+            ds=ds, dotabuff_player_id=id, n=n
+        )
+        get_cached_heroes_stats_for_dotabuff_id_in_last_n_days(ds=ds, player_id=id, n=n)
 
 
 if __name__ == "__main__":

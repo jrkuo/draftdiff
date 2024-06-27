@@ -1,3 +1,9 @@
+from datetime import datetime
+
+local_DS = datetime(year=2024, month=6, day=11)
+local_DS_date = local_DS.date()
+
+
 hero_id_dict = {
     "Alchemist": "73",
     "Axe": "2",

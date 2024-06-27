@@ -1,56 +1,19 @@
 import json
 import os
+from datetime import datetime
 
+import boto3
 import pandas as pd
 import requests
-from draftdiff import constants
+from botocore.exceptions import NoCredentialsError, PartialCredentialsError
+from draftdiff import constants, io, util
 from loguru import logger
-
-# def get_stratz_slug_for_dota_hero(hero_name) -> str:
-#     slug = f"{hero_id_dict[hero_name]}-{hero_name.lower().replace(" ", "-")}"
-#     return slug
-
-# def get_stratz_counters_page_for_hero_name(hero_name) -> str:
-#     headers = {"User-Agent": "Mozilla/5.0"}
-#     logger.warning(f"downloading stratz {hero_name} counters page")
-#     stratz_hero_slug = get_stratz_slug_for_dota_hero(hero_name)
-#     response = requests.get(
-#         f"https://stratz.com/heroes/{stratz_hero_slug}/matchups",
-#         headers=headers,
-#     )
-#     return response.text
-
-# def get_cached_stratz_counters_page(hero_name) -> str:
-#     stratz_hero_slug = get_stratz_slug_for_dota_hero(hero_name)
-#     try:
-#         with open(f"./data/stratz-{stratz_hero_slug}-counters.html", "rb") as rf:
-#             logger.info(f"using local data for {stratz_hero_slug}")
-#             html_text = rf.read().decode("utf-8")
-#             return html_text
-#     except FileNotFoundError:
-#         with open(f"./data/stratz-{stratz_hero_slug}-counters.html", "wb") as wf:
-#             match_page_text = get_stratz_counters_page_for_hero_name(hero_name)
-#             wf.write(match_page_text.encode())
-#             return match_page_text
-
-
-# def create_stratz_hero_name_id_dict() -> dict:
-#     with open(f"./data/stratzheroes.html", "r") as rf:
-#         html = rf.read()
-#         hero_id_dict = {}
-#         hero_id_name = html.split("/heroes/")[15:263]
-#         for i in range(0, len(hero_id_name), 2):
-#             hero_id_name[i] = hero_id_name[i].split('"')[0]
-#         for i in range(1, len(hero_id_name), 2):
-#             hero_id_name[i] = hero_id_name[i].split('"')[2]
-#         for i in range(0, len(hero_id_name), 2):
-#             hero_id_dict[hero_id_name[i + 1]] = hero_id_name[i]
-
-#     return hero_id_dict
-
+from tqdm import tqdm
 
 hero_id_dict = constants.hero_id_dict
 id_hero_dict = constants.id_hero_dict
+local_DS_date = constants.local_DS_date
+current_env = os.environ["ENV"]
 
 
 def get_matchup_stats_for_hero_name(token, hero_name) -> dict:
@@ -115,15 +78,52 @@ def get_matchup_stats_for_hero_name(token, hero_name) -> dict:
     return data
 
 
-def get_hero_counters_for_hero_name(token, hero_name) -> pd.DataFrame:
-    data = get_matchup_stats_for_hero_name(token, hero_name)
-    # nested dictionaries, list of length 1, element is a dictionary
-    # type(data['data']['heroStats']['heroVsHeroMatchup']['advantage']) == list
-    # len(data['data']['heroStats']['heroVsHeroMatchup']['advantage']) == 1
-    # type(data["data"]["heroStats"]["heroVsHeroMatchup"]["advantage"][0]["vs"]) == list
-    # first row in table for counters = data["data"]["heroStats"]["heroVsHeroMatchup"]["advantage"][0]["vs"][0]
+def get_cached_matchup_stats(ds, token, hero_name) -> dict:
+    hero_string = get_stratz_slug_for_dota_hero(hero_name)
+    partition_path = f"stratz/matchups/ds={ds}/hero={hero_string}"
+    try:
+        match_page_data = io.read_json(partition_path)
+        logger.info(
+            f"[{io.get_io_location()}] loaded cached data from {partition_path}"
+        )
+    except Exception:
+        if ds != util.get_current_ds():
+            raise ValueError(
+                "Cannot run webscraping functions in the past. Can only run transforms on past data"
+            )
+        logger.warning(
+            f"[{io.get_io_location()}] Running expensive matchup stats function for {hero_name}"
+        )
+        match_page_data = get_matchup_stats_for_hero_name(token, hero_name)
+        io.write_dictlist_to_json(match_page_data, partition_path)
+    return match_page_data
+
+
+def test():
+    os.environ["IO_LOCATION"] = "local"
+
+    get_cached_matchup_stats(
+        ds=util.get_current_ds(),
+        token=os.environ["STRATZ_API_TOKEN"],
+        hero_name="Arc Warden",
+    )
+
+    os.environ["IO_LOCATION"] = "s3"
+
+    get_cached_matchup_stats(
+        ds=util.get_current_ds(),
+        token=os.environ["STRATZ_API_TOKEN"],
+        hero_name="Arc Warden",
+    )
+
+    return
+
+
+def build_stratz_stats_df(match_page_data) -> pd.DataFrame:
     new_records = []
-    for row in data["data"]["heroStats"]["heroVsHeroMatchup"]["advantage"][0]["vs"]:
+    for row in match_page_data["data"]["heroStats"]["heroVsHeroMatchup"]["advantage"][
+        0
+    ]["vs"]:
         new_records += [
             {
                 "counter_hero": id_hero_dict[str(row["heroId2"])],
@@ -139,10 +139,36 @@ def get_hero_counters_for_hero_name(token, hero_name) -> pd.DataFrame:
     return df_output
 
 
+def get_stratz_slug_for_dota_hero(hero_name) -> str:
+    slug = hero_name.lower().replace(" ", "-").replace("'", "")
+    return slug
+
+
+def get_cached_hero_counters_for_hero_name(ds, hero_name) -> pd.DataFrame:
+    hero_string = get_stratz_slug_for_dota_hero(hero_name)
+    partition_path = f"stratz/matchups-df/ds={ds}/hero={hero_string}"
+    try:
+        match_page_df = io.read_df(partition_path)
+        logger.info(f"[{io.get_io_location()}] loaded cached df from {partition_path}")
+    except Exception:
+        logger.info(
+            f"[{io.get_io_location()}] Running making df from json for {hero_name}"
+        )
+        match_page_data = io.read_json(f"stratz/matchups/ds={ds}/hero={hero_string}")
+        match_page_df = build_stratz_stats_df(match_page_data)
+        io.write_df_to_df(match_page_df, partition_path)
+    return match_page_df
+
+
 def main():
     # learn about curried functions later
-    token = os.environ["STRATZ_API_TOKEN"]
-    get_hero_counters_for_hero_name(token, "Arc Warden")
+    ds = util.get_current_ds()
+    hero_list = list(constants.hero_id_dict.keys())
+    for hero_name in tqdm(hero_list):
+        get_cached_matchup_stats(
+            ds=ds, token=os.environ["STRATZ_API_TOKEN"], hero_name=hero_name
+        )
+        get_cached_hero_counters_for_hero_name(ds=ds, hero_name=hero_name)
 
 
 if __name__ == "__main__":
