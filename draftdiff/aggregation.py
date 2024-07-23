@@ -134,6 +134,9 @@ def calculate_weighted_avg_metrics_in_counter_heroes_df(
             df_group["target_winrate_vs_counter"]
             * df_group["counter_vs_target_matches_played"]
         ).sum() / df_group["counter_vs_target_matches_played"].sum()
+
+        player_id = df_group["dotabuff_player_id"].iloc[0]
+
         output_rows += [
             {
                 "hero": hero,
@@ -143,6 +146,7 @@ def calculate_weighted_avg_metrics_in_counter_heroes_df(
                 "weighted_disadvantage": weighted_disadvantage,
                 "weighted_win_percent": weighted_win_percent,
                 "num_sources": num_sources,
+                "player_id": player_id,
             }
         ]
     output_df = pd.json_normalize(output_rows)

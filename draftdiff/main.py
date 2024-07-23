@@ -12,12 +12,14 @@ from draftdiff.dotabuff import (
     get_cached_hero_counters_for_hero,
     get_cached_heroes_stats_for_dotabuff_id_in_last_n_days,
 )
-from draftdiff.io import IOLocation
+from draftdiff.io import IOLocation, get_io_location, read_df, write_df_to_df
 from draftdiff.stratz import (
     get_cached_hero_counters_for_hero_name,
     get_cached_matchup_stats,
 )
 from draftdiff.util import get_current_ds
+from draftdiff.writetosheets import create_new_sheet
+from loguru import logger
 from tqdm import tqdm
 
 
@@ -90,8 +92,42 @@ def run_pipeline(io_location, player_ids):
             "played_heroes_counters": df2,
             "played_heroes_weighted_avg_counters": df3,
         }
+        os.environ["IO_LOCATION"] = "sheets"
+        create_new_sheet(
+            spreadsheet_id="19OoA_AhjjOU1JrdTMYfRQ2oRv-i2_BnopJxbirKUthc",
+            sheet_name=f"{player_id}-data",
+            key_file_path="credentials.json",
+        )
+        write_df_to_df(
+            df3,
+            spreadsheet_id="19OoA_AhjjOU1JrdTMYfRQ2oRv-i2_BnopJxbirKUthc",
+            sheet_name=f"{player_id}-data",
+            start_cell="A1",
+            key_file_path="credentials.json",
+        )
     return player_dfs, web_dfs
+
+
+# not using
+def write_output_to_sheets(ds, player_id, days):
+    partition_path = (
+        f"output/player_counters_weighted-df/ds={ds}/player_id={player_id}/days={days}"
+    )
+    df3 = read_df(partition_path)
+    os.environ["IO_LOCATION"] = "sheets"
+    logger.info(
+        f"[{get_io_location()}] Writing df to sheets for player {player_id} for last {days} days"
+    )
+    write_df_to_df(
+        df3,
+        f"output/player_counters_weighted-sheets/ds={ds}/player_id={player_id}/days={days}",
+    )
+    return
 
 
 if __name__ == "__main__":
     main()
+    # ds = get_current_ds()
+    # player_id = "69576061"
+    # days = 30
+    # write_output_to_sheets(ds=ds, player_id=player_id, days=days)

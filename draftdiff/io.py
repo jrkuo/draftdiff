@@ -154,7 +154,14 @@ def read_df(df_partition: str):
     return df
 
 
-def write_df_to_df(df: pd.DataFrame, df_partition: str):
+def write_df_to_df(
+    df: pd.DataFrame,
+    df_partition: str = None,
+    spreadsheet_id: str = None,
+    sheet_name: str = None,
+    start_cell: str = None,
+    key_file_path: str = None,
+):
     io_location = get_io_location()
     match io_location:
         case IOLocation.LOCAL:
@@ -162,10 +169,6 @@ def write_df_to_df(df: pd.DataFrame, df_partition: str):
             os.makedirs(os.path.dirname(path), exist_ok=True)
             df.to_csv(path, header=True, index=False)
         case IOLocation.SHEETS:
-            spreadsheet_id = "19OoA_AhjjOU1JrdTMYfRQ2oRv-i2_BnopJxbirKUthc"
-            sheet_name = "Sheet1"
-            start_cell = "A1"
-            key_file_path = "credentials.json"
             writetosheets.write_to_google_sheets(
                 df=df,
                 spreadsheet_id=spreadsheet_id,
