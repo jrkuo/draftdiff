@@ -18,7 +18,7 @@ from draftdiff.stratz import (
     get_cached_matchup_stats,
 )
 from draftdiff.util import get_current_ds
-from draftdiff.writetosheets import create_new_sheet
+from draftdiff.writetosheets import create_new_sheet, create_pivot_table
 from loguru import logger
 from tqdm import tqdm
 
@@ -55,11 +55,10 @@ def main():
     run_pipeline(io_location=io_location, player_ids=player_ids)
 
 
-def run_pipeline(io_location, player_ids):
+def run_pipeline(io_location, player_ids, n=30):
     ds = get_current_ds()
     hero_list = list(HERO_ID_DICT.keys())
     os.environ["IO_LOCATION"] = io_location
-    n = 30
     player_dfs = {}
     web_dfs = {}
     for hero_name in tqdm(hero_list):
@@ -95,15 +94,29 @@ def run_pipeline(io_location, player_ids):
         os.environ["IO_LOCATION"] = "sheets"
         create_new_sheet(
             spreadsheet_id="19OoA_AhjjOU1JrdTMYfRQ2oRv-i2_BnopJxbirKUthc",
-            sheet_name=f"{player_id}-data",
+            sheet_name=f"{player_id}-{ds}-{n}days-data",
             key_file_path="credentials.json",
         )
         write_df_to_df(
             df3,
             spreadsheet_id="19OoA_AhjjOU1JrdTMYfRQ2oRv-i2_BnopJxbirKUthc",
-            sheet_name=f"{player_id}-data",
+            sheet_name=f"{player_id}-{ds}-{n}days-data",
             start_cell="A1",
             key_file_path="credentials.json",
+        )
+        create_new_sheet(
+            spreadsheet_id="19OoA_AhjjOU1JrdTMYfRQ2oRv-i2_BnopJxbirKUthc",
+            sheet_name=f"{player_id}-{ds}-{n}days-pivot",
+            key_file_path="credentials.json",
+        )
+        create_pivot_table(
+            key_file_path="credentials.json",
+            spreadsheet_id="19OoA_AhjjOU1JrdTMYfRQ2oRv-i2_BnopJxbirKUthc",
+            destinationSheetName=f"{player_id}-{ds}-{n}days-pivot",
+            sourceSheetName=f"{player_id}-{ds}-{n}days-data",
+            rowSourceColumn=1,
+            columnSourceColumn=0,
+            valueSourceColumn=4,
         )
     return player_dfs, web_dfs
 

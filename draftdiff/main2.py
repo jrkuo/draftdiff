@@ -13,7 +13,7 @@ from draftdiff.stratz import (
     get_cached_matchup_stats,
 )
 from draftdiff.util import get_current_ds
-from draftdiff.writetosheets import create_new_sheet
+from draftdiff.writetosheets import create_new_sheet, create_pivot_table
 from tqdm import tqdm
 
 
@@ -69,6 +69,20 @@ def run_pipeline(io_location):
         sheet_name=f"{ds}-data",
         start_cell="A1",
         key_file_path="credentials.json",
+    )
+    create_new_sheet(
+        spreadsheet_id="19OoA_AhjjOU1JrdTMYfRQ2oRv-i2_BnopJxbirKUthc",
+        sheet_name=f"{ds}-pivot",
+        key_file_path="credentials.json",
+    )
+    create_pivot_table(
+        key_file_path="credentials.json",
+        spreadsheet_id="19OoA_AhjjOU1JrdTMYfRQ2oRv-i2_BnopJxbirKUthc",
+        destinationSheetName=f"{ds}-pivot",
+        sourceSheetName=f"{ds}-data",
+        rowSourceColumn=1,
+        columnSourceColumn=0,
+        valueSourceColumn=2,
     )
 
 
