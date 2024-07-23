@@ -39,6 +39,15 @@
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": ["-i", "local", "-p", "181567803"]
-        }
+        },
+        {
+            "name": "Local IO location all counters",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "draftdiff.main2",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": ["-i", "local"]
+        }        
     ]
 }
