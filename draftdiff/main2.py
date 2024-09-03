@@ -8,6 +8,7 @@ from draftdiff.dotabuff import (
     get_cached_hero_counters_for_hero,
 )
 from draftdiff.io import write_df_to_df
+from draftdiff.reacthelper import get_javascript_formatted_counters_data
 from draftdiff.stratz import (
     get_cached_hero_counters_for_hero_name,
     get_cached_matchup_stats,
@@ -57,6 +58,7 @@ def run_pipeline(io_location):
         get_cached_counters_page(ds=ds, hero_name=hero_name)
         get_cached_hero_counters_for_hero(ds=ds, hero_name=hero_name)
     df1 = build_counter_heroes_df(ds=ds)
+    get_javascript_formatted_counters_data(ds=ds)
     os.environ["IO_LOCATION"] = "sheets"
     create_new_sheet(
         spreadsheet_id="19OoA_AhjjOU1JrdTMYfRQ2oRv-i2_BnopJxbirKUthc",
