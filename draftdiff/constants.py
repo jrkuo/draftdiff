@@ -87,6 +87,7 @@ HERO_ID_DICT = {
     "Puck": "13",
     "Pugna": "45",
     "Queen of Pain": "39",
+    "Ringmaster": "131",
     "Rubick": "86",
     "Shadow Demon": "79",
     "Shadow Shaman": "27",

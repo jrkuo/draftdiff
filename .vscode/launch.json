@@ -48,6 +48,15 @@
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": ["-i", "local"]
-        }        
+        },
+        {
+            "name": "S3 IO location all counters",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "draftdiff.main2",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": ["-i", "s3"]
+        },              
     ]
 }

@@ -187,6 +187,44 @@ def write_df_to_df(
             boto3.client("s3").upload_fileobj(buffer, "draftdiff", object_location)
 
 
+def read_text(data_partition: str):
+    io_location = get_io_location()
+    match io_location:
+        case IOLocation.LOCAL:
+            path = f"./data/{data_partition}/data.txt"
+            with open(path, "r") as rf:
+                text = rf.read()
+        case IOLocation.SHEETS:
+            raise ValueError("cannot read text from sheets")
+        case IOLocation.S3:
+            object_location = f"{data_partition}/data.txt"
+            s3_response = boto3.client("s3").get_object(
+                Bucket="draftdiff", Key=object_location
+            )
+            text = s3_response["Body"].read().decode("utf-8")
+    return text
+
+
+def write_text_to_text(data: str, data_partition: str):
+    io_location = get_io_location()
+    match io_location:
+        case IOLocation.LOCAL:
+            path = f"./data/{data_partition}/data.txt"
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as wf:
+                wf.write(data)
+        case IOLocation.SHEETS:
+            raise ValueError("cannot write text to sheets")
+        case IOLocation.S3:
+            object_location = f"{data_partition}/data.txt"
+            boto3.client("s3").put_object(
+                Bucket="draftdiff",
+                Key=object_location,
+                Body=data.encode("utf-8"),
+                ContentType="text/plain",
+            )
+
+
 def test():
     data = [{"X": 1, "Y": 1}, {"X": 2, "Y": 2}]
     df = pd.json_normalize(data)
