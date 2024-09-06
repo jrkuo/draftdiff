@@ -1,3 +1,4 @@
+import json
 import os
 
 import pandas as pd
@@ -18,9 +19,9 @@ def convert_df_to_javascript_formatted_data_text(df) -> str:
 
         hero_dict[hero].append({"name": counter_hero, hero: weighted_disadvantage})
 
-    output_lines = []
+    output_lines = ["{"]
     for hero, counters in hero_dict.items():
-        output_lines.append(f'"{hero}": [')
+        output_lines.append(f'  "{hero}": [')
         for counter in counters:
             # Convert the dictionary to a string and adjust the format
             counter_str = str(counter)
@@ -30,10 +31,35 @@ def convert_df_to_javascript_formatted_data_text(df) -> str:
             counter_str = counter_str.replace("{", "{ ")
             counter_str = counter_str.replace("}", " }")
             output_lines.append(f"    {counter_str},")
-        output_lines.append("],")
+        output_lines.append("  ],")
+    output_lines.append("}")
 
     output_text = "\n".join(output_lines)
     return output_text
+
+
+def convert_df_to_javascript_formatted_data_json(df) -> dict:
+    hero_dict = {}
+
+    for _, row in df.iterrows():
+        hero = row["hero"]
+        counter_hero = row["counter_hero"]
+        weighted_disadvantage = round(row["weighted_disadvantage"], 3)
+
+        if hero not in hero_dict:
+            hero_dict[hero] = []
+
+        hero_dict[hero].append({"name": counter_hero, hero: weighted_disadvantage})
+
+    return hero_dict
+
+
+def get_javascript_formatted_counters_data_json(ds) -> None:
+    partition_path = f"public"
+    logger.info(f"[{io.get_io_location()}] Running making json file from df for {ds}")
+    counter_df = io.read_df(f"output/counter-df/ds={ds}")
+    hero_dict = convert_df_to_javascript_formatted_data_json(counter_df)
+    io.write_dict_to_json(hero_dict, partition_path)
 
 
 def get_javascript_formatted_counters_data(ds):
@@ -55,7 +81,7 @@ def get_javascript_formatted_counters_data(ds):
 
 def test():
     ds = util.get_current_ds()
-    os.environ["IO_LOCATION"] = "s3"
+    os.environ["IO_LOCATION"] = "local"
     get_javascript_formatted_counters_data(ds)
 
 
