@@ -130,6 +130,25 @@ def write_dictlist_to_json(data: List[Dict], data_partition: str):
             )
 
 
+def write_dict_to_json(data: Dict, data_partition: str):
+    io_location = get_io_location()
+    match io_location:
+        case IOLocation.LOCAL:
+            path = f"./data/{data_partition}/data.json"
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w") as wf:
+                json.dump(data, wf, indent=4)
+        case IOLocation.SHEETS:
+            raise ValueError("cannot write JSON to sheets")
+        case IOLocation.S3:
+            object_location = f"{data_partition}/data.json"
+            boto3.client("s3").put_object(
+                Bucket="draftdiff",
+                Key=object_location,
+                Body=json.dumps(data, indent=4).encode("utf-8"),
+            )
+
+
 def read_df(df_partition: str):
     io_location = get_io_location()
     match io_location:
