@@ -7,7 +7,7 @@ from typing import List
 
 import boto3
 import requests
-from draftdiff.writetos3 import list_all_s3_files
+from draftdiff.s3 import list_all_s3_files
 from requests.exceptions import RequestException
 from tqdm import tqdm
 

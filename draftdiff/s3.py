@@ -8,6 +8,35 @@ import pyarrow.parquet as pq
 from draftdiff import aggregation
 
 
+def list_all_s3_files(bucket_name: str, prefix: str):
+    """Lists all files in an S3 bucket directory, handling pagination."""
+    s3_client = boto3.client("s3")
+    continuation_token = None
+    files = []
+
+    while True:
+        # Fetch objects with optional pagination token
+        response = (
+            s3_client.list_objects_v2(
+                Bucket=bucket_name, Prefix=prefix, ContinuationToken=continuation_token
+            )
+            if continuation_token
+            else s3_client.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
+        )
+
+        if "Contents" in response:
+            for obj in response["Contents"]:
+                files.append(obj["Key"])
+
+        # Check if there are more results to fetch
+        if response.get("IsTruncated"):  # More results to fetch
+            continuation_token = response["NextContinuationToken"]
+        else:
+            break
+
+    return files
+
+
 def write_df_to_parquet_to_s3(df, bucket_name, s3_key):
     buffer = io.BytesIO()
     table = pa.Table.from_pandas(df)
@@ -46,4 +75,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    list_all_s3_files("draftdiff", "opendota/matches/")
