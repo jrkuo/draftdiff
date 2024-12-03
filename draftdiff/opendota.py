@@ -169,6 +169,8 @@ if __name__ == "__main__":
             continue
         match_data = get_parsed_match_data(match_id)
         upload_gzipped_string_to_s3(match_data, f"opendota/matches/id={match_id}")
+        # transform match_data to pandas dataframe: take out lane_pos from players?
+        # write once to matches_clean upload_parquet_to_s3
         # if ii > 4:
         #     break
     # write_json_to_s3(match_data, partition_path)
