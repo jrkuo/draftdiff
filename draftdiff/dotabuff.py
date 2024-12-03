@@ -15,9 +15,6 @@ from draftdiff import constants, io, util
 from loguru import logger
 from tqdm import tqdm
 
-local_DS = constants.local_DS
-local_DS_date = constants.local_DS_date
-
 
 def get_dotabuff_match_page_text_for_player_id(
     dotabuff_player_id, match_page_num

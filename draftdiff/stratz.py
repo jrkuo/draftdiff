@@ -12,7 +12,6 @@ from tqdm import tqdm
 
 HERO_ID_DICT = constants.HERO_ID_DICT
 ID_HERO_DICT = constants.ID_HERO_DICT
-local_DS_date = constants.local_DS_date
 
 
 def get_matchup_stats_for_hero_name(token, hero_name) -> dict:
@@ -20,7 +19,11 @@ def get_matchup_stats_for_hero_name(token, hero_name) -> dict:
     url = "https://api.stratz.com/graphql"
 
     # Define headers if needed
-    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {token}",
+        "User-Agent": "STRATZ_API",
+    }
 
     # Define your GraphQL query
     graphql_request = {

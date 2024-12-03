@@ -1,9 +1,5 @@
 from datetime import datetime
 
-local_DS = datetime(year=2024, month=6, day=11)
-local_DS_date = local_DS.date()
-
-
 HERO_ID_DICT = {
     "Alchemist": "73",
     "Axe": "2",
@@ -47,6 +43,7 @@ HERO_ID_DICT = {
     "Gyrocopter": "72",
     "Hoodwink": "123",
     "Juggernaut": "8",
+    "Kez": "145",
     "Luna": "48",
     "Medusa": "94",
     "Meepo": "82",
