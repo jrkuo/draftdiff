@@ -63,33 +63,33 @@ def run_pipeline(io_location):
     df1 = build_counter_heroes_df(ds=ds)
     get_javascript_formatted_counters_data(ds=ds)
     get_javascript_formatted_counters_data_json(ds=ds)
-    os.environ["IO_LOCATION"] = "sheets"
-    create_new_sheet(
-        spreadsheet_id="19OoA_AhjjOU1JrdTMYfRQ2oRv-i2_BnopJxbirKUthc",
-        sheet_name=f"{ds}-data",
-        key_file_path="credentials.json",
-    )
-    write_df_to_df(
-        df1,
-        spreadsheet_id="19OoA_AhjjOU1JrdTMYfRQ2oRv-i2_BnopJxbirKUthc",
-        sheet_name=f"{ds}-data",
-        start_cell="A1",
-        key_file_path="credentials.json",
-    )
-    create_new_sheet(
-        spreadsheet_id="19OoA_AhjjOU1JrdTMYfRQ2oRv-i2_BnopJxbirKUthc",
-        sheet_name=f"{ds}-pivot",
-        key_file_path="credentials.json",
-    )
-    create_pivot_table(
-        key_file_path="credentials.json",
-        spreadsheet_id="19OoA_AhjjOU1JrdTMYfRQ2oRv-i2_BnopJxbirKUthc",
-        destinationSheetName=f"{ds}-pivot",
-        sourceSheetName=f"{ds}-data",
-        rowSourceColumn=1,
-        columnSourceColumn=0,
-        valueSourceColumn=2,
-    )
+    # os.environ["IO_LOCATION"] = "sheets"
+    # create_new_sheet(
+    #     spreadsheet_id="19OoA_AhjjOU1JrdTMYfRQ2oRv-i2_BnopJxbirKUthc",
+    #     sheet_name=f"{ds}-data",
+    #     key_file_path="credentials.json",
+    # )
+    # write_df_to_df(
+    #     df1,
+    #     spreadsheet_id="19OoA_AhjjOU1JrdTMYfRQ2oRv-i2_BnopJxbirKUthc",
+    #     sheet_name=f"{ds}-data",
+    #     start_cell="A1",
+    #     key_file_path="credentials.json",
+    # )
+    # create_new_sheet(
+    #     spreadsheet_id="19OoA_AhjjOU1JrdTMYfRQ2oRv-i2_BnopJxbirKUthc",
+    #     sheet_name=f"{ds}-pivot",
+    #     key_file_path="credentials.json",
+    # )
+    # create_pivot_table(
+    #     key_file_path="credentials.json",
+    #     spreadsheet_id="19OoA_AhjjOU1JrdTMYfRQ2oRv-i2_BnopJxbirKUthc",
+    #     destinationSheetName=f"{ds}-pivot",
+    #     sourceSheetName=f"{ds}-data",
+    #     rowSourceColumn=1,
+    #     columnSourceColumn=0,
+    #     valueSourceColumn=2,
+    # )
 
 
 if __name__ == "__main__":

@@ -130,3 +130,16 @@ HERO_ID_DICT = {
 }
 
 ID_HERO_DICT = {v: k for k, v in HERO_ID_DICT.items()}
+
+RANK_ID_DICT = {
+    "Herald": 1,
+    "Guardian": 2,
+    "Crusader": 3,
+    "Archon": 4,
+    "Legend": 5,
+    "Ancient": 6,
+    "Divine": 7,
+    "Immortal": 8,
+}
+
+ID_RANK_DICT = {v: k for k, v in RANK_ID_DICT.items()}
