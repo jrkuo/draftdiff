@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from datetime import datetime
 
 import boto3
@@ -197,8 +198,7 @@ def get_all_positions_heros_winrate_for_bracket(token, bracket) -> dict:
     return data
 
 
-# TODO:
-def get_all_synergies_for_bracket(token, bracket) -> dict:
+def get_all_synergies_for_bracket_week(token, bracket, week) -> dict:
     bracket = bracket.upper()
     url = "https://api.stratz.com/graphql"
 
@@ -211,93 +211,39 @@ def get_all_synergies_for_bracket(token, bracket) -> dict:
 
     # Define your GraphQL query
     graphql_request = {
-        "operationName": "HeroesMetaPositions",
-        "query": """query HeroesMetaPositions($bracketIds: [RankBracket], $take: Int, $skip: Int, $heroIds: [Short]) {
+        "operationName": "Synergy",
+        "query": """query Synergy($bracketBasicIds: [RankBracketBasicEnum], $matchLimit: Int, $take: Int, $heroIds: [Short], $week: Long) {
   heroStats {
-    heroesPos_1: winDay(
+    matchUp_Prev_Week_1: matchUp(
+      bracketBasicIds: $bracketBasicIds
+      matchLimit: $matchLimit
       take: $take
-      skip: $skip
-      positionIds: [POSITION_1]
-      bracketIds: $bracketIds
+      week: $week
       heroIds: $heroIds
     ) {
       heroId
-      matchCount
-      winCount
-      timestamp: day
+      vs {
+        heroId2
+        synergy
+        matchCount
+        __typename
+      }
+      with {
+        heroId2
+        synergy
+        matchCount
+        __typename
+      }
       __typename
     }
-    heroesPos_2: winDay(
-      take: $take
-      skip: $skip
-      positionIds: [POSITION_2]
-      bracketIds: $bracketIds
-      heroIds: $heroIds
-    ) {
-      heroId
-      matchCount
-      winCount
-      timestamp: day
-      __typename
-    }
-    heroesPos_3: winDay(
-      take: $take
-      skip: $skip
-      positionIds: [POSITION_3]
-      bracketIds: $bracketIds
-      heroIds: $heroIds
-    ) {
-      heroId
-      matchCount
-      winCount
-      timestamp: day
-      __typename
-    }
-    heroesPos_4: winDay(
-      take: $take
-      skip: $skip
-      positionIds: [POSITION_4]
-      bracketIds: $bracketIds
-      heroIds: $heroIds
-    ) {
-      heroId
-      matchCount
-      winCount
-      timestamp: day
-      __typename
-    }
-    heroesPos_5: winDay(
-      take: $take
-      skip: $skip
-      positionIds: [POSITION_5]
-      bracketIds: $bracketIds
-      heroIds: $heroIds
-    ) {
-      heroId
-      matchCount
-      winCount
-      timestamp: day
-      __typename
-    }
-    heroes: winDay(
-      take: $take
-      skip: $skip
-      bracketIds: $bracketIds
-      heroIds: $heroIds
-    ) {
-      heroId
-      matchCount
-      winCount
-      timestamp: day
-      __typename
-    }
-    __typename
   }
-}""",
+}
+""",
         "variables": {
-            "bracketIds": [bracket],
-            # "take": 7,
-            "skip": 0,
+            "matchLimit": 0,
+            "take": 200,
+            "bracketBasicIds": bracket,
+            "week": week,
         },
     }
     # Send the POST request with the GraphQL query
@@ -378,7 +324,7 @@ def build_stratz_stats_df(match_page_data) -> pd.DataFrame:
 
 # takes output from get_all_positions_heros_winrate_for_bracket and builds structured dictionary
 def build_hero_position_winrate_for_bracket(stratz_api_data) -> dict:
-    new_dict = {
+    winrates = {
         (
             position.replace("heroesPos_", "pos")
             if position.startswith("heroesPos_")
@@ -404,7 +350,7 @@ def build_hero_position_winrate_for_bracket(stratz_api_data) -> dict:
         for position, heroes in stratz_api_data["data"]["heroStats"].items()
         if position.startswith("heroesPos_")
     }
-    return new_dict
+    return winrates
 
 
 def process_winrates_for_all_brackets():
@@ -415,8 +361,9 @@ def process_winrates_for_all_brackets():
     winrates = {"winrates": {}}
 
     # Loop through each bracket
-    for bracket in tqdm(bracket_list, desc="Processing brackets"):
-        tqdm.set_description(f"Processing {bracket}")
+    pbar = tqdm(bracket_list)
+    for bracket in pbar:
+        pbar.set_description(f"Processing {bracket}")
 
         # Fetch raw data for the current bracket
         raw_data = get_all_positions_heros_winrate_for_bracket(
@@ -430,6 +377,69 @@ def process_winrates_for_all_brackets():
 
     # Return the final winrates dictionary
     return winrates
+
+
+# takes output from get_all_synergies_for_bracket_week and builds structured dictionary
+def build_matchup_synergy_counter_for_bracket(stratz_api_data) -> dict:
+    matchups = {}
+    for hero_entry in stratz_api_data["data"]["heroStats"]["matchUp_Prev_Week_1"][1:]:
+        hero_id = hero_entry["heroId"]
+
+        if hero_id == 127:
+            continue
+        hero_name = ID_HERO_DICT.get(str(hero_id), f"Unknown({hero_id})")
+
+        if hero_name not in matchups:
+            matchups[hero_name] = {}
+
+        synergy_dict = {entry["heroId2"]: entry for entry in hero_entry["with"]}
+        counter_dict = {entry["heroId2"]: entry for entry in hero_entry["vs"]}
+
+        all_opponents = set(synergy_dict.keys()) | set(counter_dict.keys())
+
+        for opp_id in all_opponents:
+            opp_name = ID_HERO_DICT.get(str(opp_id), f"Unknown({opp_id})")
+
+            synergy = round(synergy_dict.get(opp_id, {}).get("synergy", 0), 3)
+            counter = round(counter_dict.get(opp_id, {}).get("synergy", 0), 3)
+            match_count_with = synergy_dict.get(opp_id, {}).get("matchCount", 0)
+            match_count_vs = counter_dict.get(opp_id, {}).get("matchCount", 0)
+
+            matchups[hero_name][opp_name] = {
+                "synergy": synergy,
+                "counter": counter,
+                "matchCountWith": match_count_with,
+                "matchCountVs": match_count_vs,
+            }
+
+    return matchups
+
+
+def process_matchups_for_all_brackets():
+    # List of rank names (brackets)
+    bracket_list = list(constants.RANK_ENUM_ID_DICT.keys())
+    week = get_unix_timestamp_7_days_ago()
+
+    # Initialize dictionary to store matchups
+    matchups = {"matchups": {}}
+
+    # Loop through each bracket
+    pbar = tqdm(bracket_list)
+    for bracket in pbar:
+        pbar.set_description(f"Processing {bracket}")
+
+        # Fetch raw data for the current bracket
+        raw_data = get_all_synergies_for_bracket_week(
+            token=os.environ["STRATZ_API_TOKEN"], bracket=bracket, week=week
+        )
+
+        # Build the transformed data and store it in the matchups dictionary
+        matchups["matchups"][f"bracket{constants.RANK_ENUM_ID_DICT[bracket]}"] = (
+            build_matchup_synergy_counter_for_bracket(raw_data)
+        )
+
+    # Return the final matchups dictionary
+    return matchups
 
 
 def get_stratz_slug_for_dota_hero(hero_name) -> str:
@@ -453,6 +463,12 @@ def get_cached_hero_counters_for_hero_name(ds, hero_name) -> pd.DataFrame:
     return match_page_df
 
 
+def get_unix_timestamp_7_days_ago() -> int:
+    seconds_in_seven_days = 7 * 24 * 60 * 60
+    timestamp = int(time.time()) - seconds_in_seven_days
+    return timestamp
+
+
 def main():
     # learn about curried functions later
     ds = util.get_current_ds()
@@ -466,7 +482,8 @@ def main():
 
 def main_test():
     ds = util.get_current_ds()
-    process_winrates_for_all_brackets()
+    # process_winrates_for_all_brackets()
+    process_matchups_for_all_brackets()
 
 
 if __name__ == "__main__":
