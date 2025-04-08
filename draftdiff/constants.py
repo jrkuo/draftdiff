@@ -143,3 +143,10 @@ RANK_ID_DICT = {
 }
 
 ID_RANK_DICT = {v: k for k, v in RANK_ID_DICT.items()}
+
+RANK_ENUM_ID_DICT = {
+    "Herald_Guardian": "1_2",
+    "Crusader_Archon": "3_4",
+    "Legend_Ancient": "5_6",
+    "Divine_Immortal": "7_8",
+}
