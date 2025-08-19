@@ -1,0 +1,3 @@
+please do not include comments, code should be self-evident
+please prefer simplicity over scalability
+when running commands, be sure to activate the virtualenv first venv/bin/activate

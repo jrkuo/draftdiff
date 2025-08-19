@@ -6,5 +6,43 @@
             "source.fixAll": "explicit"
         }
     },
-    "ruff.organizeImports": true
+    "python.analysis.importFormat": "absolute",
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.completeFunctionParens": true,
+    "workbench.colorTheme": "Default Dark+",
+    "ruff.organizeImports": true,
+    "ruff.lint.enable": true,
+    "ruff.path": [
+        "./venv/bin/ruff"
+    ],
+    "python.defaultInterpreterPath": "./venv/bin/python",
+    "python.pythonPath": "./venv/bin/python",
+    "python.terminal.activateEnvInCurrentTerminal": true,
+    "python.terminal.activateEnvironment": true,
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/venv/**": true,
+        "**/.vscode-server/**": true
+    },
+    "python.analysis.indexing": true,
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/venv": true,
+    },
+    "search.exclude": {
+        "**/__pycache__": true,
+        "**/*.txt": true,
+        "**/*.json": true,
+        "**/*.html": true,
+        "**/*.csv": true,
+        "**/*.md": true,
+        "**/data/**": true,
+        "**/tmp/**": true
+    },
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.pytestEnabled": true,
+    "python.testing.pytestPath": "./venv/bin/pytest",
 }
