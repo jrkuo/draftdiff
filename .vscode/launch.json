@@ -20,7 +20,12 @@
             "module": "draftdiff.main",
             "console": "integratedTerminal",
             "justMyCode": false,
-            "args": ["-i", "s3", "-p", "181567803"]
+            "args": [
+                "-i",
+                "s3",
+                "-p",
+                "181567803"
+            ]
         },
         {
             "name": "Local IO location",
@@ -29,7 +34,12 @@
             "module": "draftdiff.main",
             "console": "integratedTerminal",
             "justMyCode": false,
-            "args": ["-i", "local", "-p", "181567803"]
+            "args": [
+                "-i",
+                "local",
+                "-p",
+                "181567803"
+            ]
         },
         {
             "name": "Local IO location all counters",
@@ -38,7 +48,10 @@
             "module": "draftdiff.main2",
             "console": "integratedTerminal",
             "justMyCode": false,
-            "args": ["-i", "local"]
+            "args": [
+                "-i",
+                "local"
+            ]
         },
         {
             "name": "S3 IO location all counters",
@@ -47,20 +60,44 @@
             "module": "draftdiff.main2",
             "console": "integratedTerminal",
             "justMyCode": false,
-            "args": ["-i", "s3"]
-        },              
+            "args": [
+                "-i",
+                "s3"
+            ]
+        },
         {
-            "name": "Hero Builds: Bane @ Clavision Masters 2025",
+            "name": "Hero Builds: Liquipedia",
             "type": "debugpy",
             "request": "launch",
             "module": "draftdiff.hero_builds",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "--hero_name", "Bane",
-                "--liquipedia-query", "https://liquipedia.net/dota2/Special:RunQuery/Game_history?title=Special%3ARunQuery%2FGame_history&pfRunQueryFormName=Game+history&Gh=%26tournaments%3DClavision%252FMasters%252F2025%252FGroup_Stage%252C%2BClavision%252FMasters%252F2025&wpRunQuery=Run+query&Gh%5Bteams%5D%5Bis_list%5D=1&Gh%5Bpicks%5D%5Bis_list%5D=1&Gh%5Bpicksteam%5D=&Gh%5Bpicks2%5D%5Bis_list%5D=1&Gh%5Bpicks2team%5D=&Gh%5Bbans%5D%5Bis_list%5D=1&Gh%5Btournaments%5D%5B%5D=Clavision%2FMasters%2F2025%2FGroup_Stage&Gh%5Btournaments%5D%5B%5D=Clavision%2FMasters%2F2025&Gh%5Btournaments%5D%5Bis_list%5D=1&Gh%5Btype%5D=&Gh%5Bpublisherid%5D=&Gh%5Bpatch%5D%5Bis_list%5D=1&Gh%5Bsdate%5D%5Bday%5D=&Gh%5Bsdate%5D%5Bmonth%5D=&Gh%5Bsdate%5D%5Byear%5D=&Gh%5Bedate%5D%5Bday%5D=&Gh%5Bedate%5D%5Bmonth%5D=&Gh%5Bedate%5D%5Byear%5D=&Gh%5Blimit%5D=&Gh%5Boffset%5D=&Gh%5Bsort%5D%5Bis_checkbox%5D=true&wpRunQuery=&pf_free_text="
+                "--liquipedia-query",
+                "https://liquipedia.net/dota2/Special:RunQuery/Game_history?title=Special%3ARunQuery%2FGame_history&pfRunQueryFormName=Game+history&Gh=%26tournaments%3DClavision%252FMasters%252F2025%252FGroup_Stage%252C%2BClavision%252FMasters%252F2025&wpRunQuery=Run+query&Gh%5Bteams%5D%5Bis_list%5D=1&Gh%5Bpicks%5D%5Bis_list%5D=1&Gh%5Bpicksteam%5D=&Gh%5Bpicks2%5D%5Bis_list%5D=1&Gh%5Bpicks2team%5D=&Gh%5Bbans%5D%5Bis_list%5D=1&Gh%5Btournaments%5D%5B%5D=Clavision%2FMasters%2F2025%2FGroup_Stage&Gh%5Btournaments%5D%5B%5D=Clavision%2FMasters%2F2025&Gh%5Btournaments%5D%5Bis_list%5D=1&Gh%5Btype%5D=&Gh%5Bpublisherid%5D=&Gh%5Bpatch%5D%5Bis_list%5D=1&Gh%5Bsdate%5D%5Bday%5D=&Gh%5Bsdate%5D%5Bmonth%5D=&Gh%5Bsdate%5D%5Byear%5D=&Gh%5Bedate%5D%5Bday%5D=&Gh%5Bedate%5D%5Bmonth%5D=&Gh%5Bedate%5D%5Byear%5D=&Gh%5Blimit%5D=&Gh%5Boffset%5D=&Gh%5Bsort%5D%5Bis_checkbox%5D=true&wpRunQuery=&pf_free_text="
             ]
-        },          
+        },
+        {
+            "name": "Hero Builds: League",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "draftdiff.hero_builds",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--stratz-league-id",
+                "17665"
+            ]
+        },
+        {
+            "name": "Win Rates & Pick Rates",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "draftdiff.hero_win_rates",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": []
+        },
         {
             "name": "Python: Current File",
             "type": "debugpy",
@@ -70,6 +107,5 @@
             "justMyCode": true,
             "cwd": "${workspaceFolder}"
         },
-
     ]
 }

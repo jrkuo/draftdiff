@@ -1,20 +1,18 @@
 import argparse
 import asyncio
 import hashlib
-import json
-import os
 import time
 from pathlib import Path
-from typing import Any, TypedDict
 
 import diskcache as dc
 import pandas as pd
-import requests
 from bs4 import BeautifulSoup
 from crawl4ai import AsyncWebCrawler
 from tqdm import tqdm
 
 from draftdiff.models.opendota import MatchResponse
+from draftdiff.opendota import MatchHero, do_hero_build_df, opendota_match, parse_match_heroes
+from draftdiff.stratz import get_league_match_ids
 
 cache_dir = Path.home() / '.cache' / 'draftdiff'
 cache_dir.mkdir(parents=True, exist_ok=True)
@@ -38,15 +36,6 @@ async def _fetch_tournament_match_ids(url: str) -> list[int]:
     return match_ids
 
 
-async def _fetch_opendota_match_id(match_id: int) -> MatchResponse:
-    time.sleep(1.05)
-    response = requests.get(f'https://api.opendota.com/api/matches/{match_id}')
-    response.raise_for_status()
-    response_dict: dict = response.json()  # type: ignore
-    match_response: MatchResponse = MatchResponse(**response_dict)  # type: ignore
-    return match_response
-
-
 async def tournament_match_ids(url: str) -> list[int]:
     url_hash = hashlib.md5(url.encode()).hexdigest()
     cache_key = f'tournament_matches_{url_hash}'
@@ -56,114 +45,52 @@ async def tournament_match_ids(url: str) -> list[int]:
         return cached_result  # type: ignore
 
     match_ids = await _fetch_tournament_match_ids(url)
-    # Cache for 30 days (1 month)
     cache.set(cache_key, match_ids, expire=2592000)  # type: ignore
     return match_ids
 
 
-async def opendota_match(match_id: int) -> MatchResponse:
-    cache_key = f'opendota_match_{match_id}'
+async def league_match_ids(league_id: int) -> list[int]:
+    cache_key = f'league_matches_{league_id}'
 
     cached_result = cache.get(cache_key)  # type: ignore
     if cached_result is not None:
         return cached_result  # type: ignore
 
-    match_ids = await _fetch_opendota_match_id(match_id)
-    # Cache for 30 days (1 month)
-    cache.set(cache_key, match_ids, expire=2592000)  # type: ignore
+    match_ids = get_league_match_ids(league_id)
+    cache.set(cache_key, match_ids, expire=604800)  # type: ignore
     return match_ids
-
-
-class MatchHero(TypedDict):
-    match_id: str
-    hero_name: str
-    skills: list[str]
-    items: list[list[str]]
-    lane: str
-    won: bool
-
-
-async def parse_match_heroes(match: MatchResponse) -> list[MatchHero]:
-    models_path = os.path.join(os.path.dirname(__file__), 'models', 'dotaconstants')
-
-    ability_ids_path = os.path.join(models_path, 'ability_ids.json')
-    with open(ability_ids_path) as f:
-        ability_id_to_name = json.load(f)
-
-    heroes_path = os.path.join(models_path, 'heroes.json')
-    with open(heroes_path) as f:
-        hero_id_to_hero = json.load(f)
-
-    if not match.players:
-        raise Exception(f'No players found for match {match.match_id}')
-
-    match_heroes: list[MatchHero] = []
-    for player in match.players:
-        player_won: bool = (match.radiant_win and player.isRadiant) or (not match.radiant_win and not player.isRadiant)
-        match_heroes += [
-            MatchHero(
-                {
-                    'match_id': match.match_id,
-                    'hero_name': hero_id_to_hero[str(player.hero_id)]['localized_name'],
-                    'items': [[str(i.time), str(i.key)] for i in player.purchase_log],  # type: ignore
-                    'skills': list(map(lambda x: ability_id_to_name[str(x)], player.ability_upgrades_arr)),  # type: ignore
-                    'lane': player.lane,  # map to str
-                    'won': player_won,
-                }
-            )
-        ]
-    return match_heroes
-
-
-def do_hero_build_df(target_hero_builds: list[MatchHero]) -> pd.DataFrame:
-    rows: list[dict[str, Any]] = []
-
-    def to_item_ssv(items: list[list[str]]):
-        return '\n'.join([';'.join(pair) for pair in items])
-
-    for hero_build in target_hero_builds:
-        pregame_items = [i for i in hero_build['items'] if int(i[0]) <= 0]
-        laning_items = [i for i in hero_build['items'] if int(i[0]) > 0 and int(i[0]) <= 10 * 60]
-        early_game_items = [i for i in hero_build['items'] if int(i[0]) > 10 * 60 and int(i[0]) <= 21 * 60]
-        mid_game_items = [i for i in hero_build['items'] if int(i[0]) > 21 * 60 and int(i[0]) <= 45 * 60]
-        late_game_items = [i for i in hero_build['items'] if int(i[0]) > 45 * 60 and int(i[0]) <= 60 * 60]
-        super_late_game_items = [i for i in hero_build['items'] if int(i[0]) > 60 * 60]
-        rows += [
-            {
-                'match_id': hero_build['match_id'],
-                'skills': '\n'.join(hero_build['skills']),
-                'lane': hero_build['lane'],
-                'won': hero_build['won'],
-                'pregame_items': to_item_ssv(pregame_items),
-                'laning_items': to_item_ssv(laning_items),
-                'early_game_items': to_item_ssv(early_game_items),
-                'mid_game_items': to_item_ssv(mid_game_items),
-                'late_game_items': to_item_ssv(late_game_items),
-                'super_late_game_items': to_item_ssv(super_late_game_items),
-            }
-        ]
-
-    return pd.DataFrame(rows)
 
 
 async def main():
     parser = argparse.ArgumentParser(description='Analyze hero builds from tournament matches')
-    parser.add_argument('--hero_name', type=str, required=True, help='Name of the hero to analyze')
     parser.add_argument(
-        '--liquipedia-query', type=str, required=True, help='Liquipedia query URL for tournament matches'
+        '--liquipedia-query', type=str, required=False, help='Liquipedia query URL for tournament matches'
     )
+    parser.add_argument('--stratz-league-id', type=int, required=False, help='Dotabuff league URL')
 
     args = parser.parse_args()
 
-    hero_name = args.hero_name
     liquipedia_url = args.liquipedia_query
+    league_id = args.stratz_league_id
 
-    print(f'Analyzing builds for hero: {hero_name}')
-    print(f'Using Liquipedia query: {liquipedia_url}')
+    if liquipedia_url and league_id:
+        raise ValueError('Cannot specify both --liquipedia-query and ---stratz-league-id')
 
-    # Call the function with parsed arguments
-    match_ids = await tournament_match_ids(liquipedia_url)
-    print(f'Found {len(match_ids)} match URLs')
+    if not liquipedia_url and not league_id:
+        raise ValueError('Must specify either --liquipedia-query or ---stratz-league-id')
+
+    if liquipedia_url:
+        print(f'Using Liquipedia query: {liquipedia_url}')
+        match_ids = await tournament_match_ids(liquipedia_url)
+        source = liquipedia_url
+        source_type = 'tournament'
+    else:
+        print(f'Using League ID: {league_id}')
+        match_ids = await league_match_ids(league_id)
+        source = str(league_id)
+        source_type = 'stratz_league'
+
+    print(f'Found {len(match_ids)} match IDs')
 
     match_responses: list[MatchResponse] = []
     for match_id in tqdm(match_ids):
@@ -175,10 +102,13 @@ async def main():
         match_hero_builds: list[MatchHero] = await parse_match_heroes(match_response)
         hero_builds += match_hero_builds
 
-    target_hero_builds: list[MatchHero] = [b for b in hero_builds if b['hero_name'] == hero_name]
-    df_hero_builds: pd.DataFrame = do_hero_build_df(target_hero_builds)
-    url_hash = hashlib.md5(liquipedia_url.encode()).hexdigest()
-    df_hero_builds.to_csv(f'{hero_name}_{url_hash}.csv', index=False)
+    df_hero_builds: pd.DataFrame = do_hero_build_df(hero_builds)
+    url_hash = hashlib.md5(source.encode()).hexdigest()
+
+    output_dir = Path.cwd() / 'data' / 'hero_builds'
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    df_hero_builds.to_csv(output_dir / f'{source_type}_{url_hash}.csv', index=False)
 
     return
 

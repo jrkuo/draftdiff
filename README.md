@@ -27,5 +27,5 @@ This JSON key file contains the credentials for your service account and will be
 https://docs.opendota.com/
 ```
 # copy https://api.opendota.com/api to draftdiff/models/opendota_openapi_spec.json
-datamodel-codegen --input draftdiff/models/opendota_openapi_spec.json --output draftdiff/models/opendota.py --output-model-type typing.TypedDict
+datamodel-codegen --input draftdiff/models/opendota_openapi_spec.json --output draftdiff/models/opendota.py
 ```
