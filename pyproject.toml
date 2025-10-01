@@ -11,7 +11,7 @@ packages = [
 include = ["pyproject.toml", "README.md", "LICENSE"]
 
 [tool.poetry.dependencies]
-python = "3.11.0"
+python = "3.11.9"
 beautifulsoup4 = "^4.12.3"
 pandas = "^2.2.1"
 loguru = "^0.7.2"

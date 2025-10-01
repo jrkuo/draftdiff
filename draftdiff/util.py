@@ -7,3 +7,7 @@ def get_current_ds():
 
 def databricks_print_test():
     print("draftdiff imported")
+
+
+if __name__ == "__main__":
+    get_current_ds()

@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 
 def build_target_heroes_counter_heroes_df_for_dotabuff_id_in_last_n_days2(
-    ds, player_id, n
+    ds: str, player_id: int, n: int
 ) -> pd.DataFrame:
     partition_path = f"output/player_counters-df/ds={ds}/player_id={player_id}/days={n}"
     try:
