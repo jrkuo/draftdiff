@@ -90,6 +90,18 @@
             ]
         },
         {
+            "name": "Pairwise Win Rate: League",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "draftdiff.pairwise_win_rates",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--stratz-league-id",
+                "17665"
+            ]
+        },
+        {
             "name": "Win Rates & Pick Rates",
             "type": "debugpy",
             "request": "launch",
