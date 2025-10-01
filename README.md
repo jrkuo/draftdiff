@@ -22,3 +22,10 @@ Once the service account is created, locate it in the list of service accounts a
 In the "Keys" tab, click on the "Add key" button and select "Create new key".
 Choose the key type as JSON and click on the "Create" button. This will download the JSON key file to your computer.
 This JSON key file contains the credentials for your service account and will be used to authenticate requests from your Python script to the Google Sheets API. Keep this file secure and don't share it publicly.
+
+# Generating opendota model
+https://docs.opendota.com/
+```
+# copy https://api.opendota.com/api to draftdiff/models/opendota_openapi_spec.json
+datamodel-codegen --input draftdiff/models/opendota_openapi_spec.json --output draftdiff/models/opendota.py
+```
