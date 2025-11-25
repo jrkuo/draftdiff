@@ -1,6 +1,6 @@
 import os
 import time
-from typing import Any
+from typing import Any, TypedDict
 
 import pandas as pd
 import requests
@@ -8,6 +8,38 @@ from loguru import logger
 from tqdm import tqdm
 
 from draftdiff import constants, io, util
+
+
+class HeroStatsVs(TypedDict):
+    heroId2: int
+    matchCount: int
+    winCount: int
+    synergy: float
+    __typename: str
+
+
+class Advantage(TypedDict):
+    heroId: int
+    matchCountWith: int
+    matchCountVs: int
+    with_: list[HeroStatsVs]  # 'with' renamed because it's a keyword
+    vs: list[HeroStatsVs]
+    __typename: str
+
+
+class HeroVsHeroMatchup(TypedDict):
+    advantage: list[Advantage]
+    __typename: str
+
+
+class HeroStats(TypedDict):
+    heroVsHeroMatchup: HeroVsHeroMatchup
+    __typename: str
+
+
+class MatchupData(TypedDict):
+    data: HeroStats
+
 
 HERO_ID_DICT = constants.HERO_ID_DICT
 ID_HERO_DICT = constants.ID_HERO_DICT
@@ -55,7 +87,7 @@ def get_league_match_ids(league_id: int) -> list[int]:
     return match_ids
 
 
-def get_matchup_stats_for_hero_name(token, hero_name) -> dict:
+def get_matchup_stats_for_hero_name(token, hero_name) -> MatchupData:
     heroid = HERO_ID_DICT[hero_name]
     url = 'https://api.stratz.com/graphql'
 
@@ -301,7 +333,7 @@ def get_all_synergies_for_bracket_week(token, bracket, week) -> dict:
     return data
 
 
-def get_cached_matchup_stats(ds, token, hero_name) -> dict:
+def get_cached_matchup_stats(ds: str, token: str, hero_name: str) -> MatchupData:
     hero_string = get_stratz_slug_for_dota_hero(hero_name)
     partition_path = f'stratz/matchups/ds={ds}/hero={hero_string}'
     try:
@@ -363,7 +395,7 @@ def build_hero_position_winrate_for_bracket(stratz_api_data) -> dict:
                 for key, value in hero.items()
                 if key in {'matchCount'} or key not in {'winCount', 'timestamp', '__typename'}
             }
-            | {'winrate': f'{hero["winCount"] / hero["matchCount"]:.2f}' if hero['matchCount'] > 0 else 'N/A'}
+            | {'winrate': f'{hero["winCount"] / hero["matchCount"]:.3f}' if hero['matchCount'] > 0 else 'N/A'}
             for hero in heroes
         ]
         for position, heroes in stratz_api_data['data']['heroStats'].items()
@@ -457,12 +489,12 @@ def process_matchups_for_all_brackets():
     return matchups
 
 
-def get_stratz_slug_for_dota_hero(hero_name) -> str:
+def get_stratz_slug_for_dota_hero(hero_name: str) -> str:
     slug = hero_name.lower().replace(' ', '-').replace("'", '')
     return slug
 
 
-def get_cached_hero_counters_for_hero_name(ds, hero_name) -> pd.DataFrame:
+def get_cached_hero_counters_for_hero_name(ds: str, hero_name: str) -> pd.DataFrame:
     hero_string = get_stratz_slug_for_dota_hero(hero_name)
     partition_path = f'stratz/matchups-df/ds={ds}/hero={hero_string}'
     try:
@@ -493,8 +525,59 @@ def main():
 
 def main_test():
     ds = util.get_current_ds()
-    # process_winrates_for_all_brackets()
-    process_matchups_for_all_brackets()
+    process_winrates_for_all_brackets()
+    # process_matchups_for_all_brackets()
+
+
+def format_hero_winrates_all_brackets(token: str) -> dict[str, dict[str, list[dict[str, Any]]]]:
+    """Fetch and format win rates for all heroes across all 8 brackets and 5 positions.
+
+    Args:
+        token: Stratz API token
+
+    Returns:
+        Dictionary with structure: {bracket_name: {position: [{hero, winrate, matches}]}}
+    """
+    bracket_list = list(constants.RANK_ID_DICT.keys())
+    winrates: dict[str, dict[str, list[dict[str, Any]]]] = {}
+
+    pbar = tqdm(bracket_list, desc='Fetching win rates')
+    for bracket in pbar:
+        pbar.set_description(f'Fetching win rates: {bracket}')
+
+        # Fetch raw data for the current bracket
+        raw_data = get_all_positions_heros_winrate_for_bracket(token=token, bracket=bracket)
+
+        # Build the transformed data and store it with bracket name as key
+        winrates[bracket] = build_hero_position_winrate_for_bracket(raw_data)
+
+    return winrates
+
+
+def format_synergies_counters_all_brackets(token: str) -> dict[str, dict[str, dict[str, dict[str, Any]]]]:
+    """Fetch and format synergies/counters for all hero pairs across all 4 grouped brackets.
+
+    Args:
+        token: Stratz API token
+
+    Returns:
+        Dictionary with structure: {bracket_group: {hero1: {hero2: {synergy, counter, matchCountWith, matchCountVs}}}}
+    """
+    bracket_list = list(constants.RANK_ENUM_ID_DICT.keys())
+    week = get_unix_timestamp_7_days_ago()
+    matchups: dict[str, dict[str, dict[str, dict[str, Any]]]] = {}
+
+    pbar = tqdm(bracket_list, desc='Fetching synergies/counters')
+    for bracket in pbar:
+        pbar.set_description(f'Fetching synergies/counters: {bracket}')
+
+        # Fetch raw data for the current bracket
+        raw_data = get_all_synergies_for_bracket_week(token=token, bracket=bracket, week=week)
+
+        # Build the transformed data and store it with bracket name as key
+        matchups[bracket] = build_matchup_synergy_counter_for_bracket(raw_data)
+
+    return matchups
 
 
 if __name__ == '__main__':

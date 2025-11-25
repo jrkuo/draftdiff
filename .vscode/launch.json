@@ -111,6 +111,36 @@
             "args": []
         },
         {
+            "name": "Rosh Analysis: Local",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "draftdiff.generate_rosh_analysis_data",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--io-location",
+                "local",
+                "--output-dir",
+                "data"
+            ]
+        },
+        {
+            "name": "Rosh Analysis: S3",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "draftdiff.generate_rosh_analysis_data",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--io-location",
+                "s3",
+                "--output-dir",
+                "public",
+                "--filename",
+                "stratz_data.json.gz"
+            ]
+        },
+        {
             "name": "Python: Current File",
             "type": "debugpy",
             "request": "launch",
