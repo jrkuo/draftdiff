@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "draftdiff"
-version = "0.3.0"
+version = "0.4.0"
 description = "creating dota2 counterpicker"
 authors = ["Jeff", "Luke"]
 license = "MIT"
