@@ -251,7 +251,7 @@ def get_all_positions_heros_winrate_for_bracket(token, bracket) -> dict:
 }""",
         'variables': {
             'bracketIds': [bracket],
-            'take': 1,  # past x days of data
+            'take': 7,  # past 7 days of data
             'skip': 0,
         },
     }
@@ -350,7 +350,7 @@ def get_all_heros_matchcount_for_bracket(token: str, bracket: str) -> dict:
         'query': """query GetGraphsTime($heroIds: [Short], $bracketIds: [RankBracket], $positionIds: [MatchPlayerPositionType], $regionIds: [BasicRegionType], $gameModeIds: [GameModeEnumType]) {
   heroStats {
     hero: winDay(
-      take: 1
+      take: 7
       heroIds: $heroIds
       bracketIds: $bracketIds
       positionIds: $positionIds
@@ -364,7 +364,7 @@ def get_all_heros_matchcount_for_bracket(token: str, bracket: str) -> dict:
       __typename
     }
     allHeroes: winDay(
-      take: 1
+      take: 7
       groupBy: ALL
       bracketIds: $bracketIds
       positionIds: $positionIds
@@ -457,65 +457,92 @@ def build_hero_position_winrate_for_bracket(stratz_api_data: dict, total_bracket
         Dictionary with hero stats by position including pick rates
     """
     # Get total match counts per hero from the 'heroes' key (no position)
+    # Aggregate across all days (API returns array of daily data)
     hero_total_matches: dict[str, int] = {}
+    hero_total_wins: dict[str, int] = {}
 
-    # Extract from 'heroes' field instead of summing positions
+    # Extract from 'heroes' field and aggregate across 7 days
     if 'heroes' in stratz_api_data['data']['heroStats']:
-        for hero in stratz_api_data['data']['heroStats']['heroes']:
-            hero_id = hero['heroId']
+        for hero_day_data in stratz_api_data['data']['heroStats']['heroes']:
+            hero_id = hero_day_data['heroId']
+            if hero_id not in [1]:
+                continue
             hero_name = ID_HERO_DICT.get(str(hero_id), 'Unknown Hero')
-            hero_total_matches[hero_name] = hero['matchCount']
+            # Sum match counts across all days
+            hero_total_matches[hero_name] = hero_total_matches.get(hero_name, 0) + hero_day_data['matchCount']
+            hero_total_wins[hero_name] = hero_total_wins.get(hero_name, 0) + hero_day_data['winCount']
 
     # Track position-specific matches for position pick rates
+    # Aggregate across all days
     hero_position_matches: dict[str, dict[str, int]] = {}
+    hero_position_wins: dict[str, dict[str, int]] = {}
 
     for position, heroes in stratz_api_data['data']['heroStats'].items():
         if position.startswith('heroesPos_'):
             pos_key = position.replace('heroesPos_', 'pos')
-            for hero in heroes:
-                hero_id = hero['heroId']
+            for hero_day_data in heroes:
+                hero_id = hero_day_data['heroId']
+                if hero_id not in [1]:
+                    continue
                 hero_name = ID_HERO_DICT.get(str(hero_id), 'Unknown Hero')
-                match_count = hero['matchCount']
+                match_count = hero_day_data['matchCount']
+                win_count = hero_day_data['winCount']
 
-                # Track position-specific matches
+                # Track position-specific matches (aggregate across days)
                 if hero_name not in hero_position_matches:
                     hero_position_matches[hero_name] = {}
-                hero_position_matches[hero_name][pos_key] = match_count
-    # Now build the output with calculated rates
-    winrates = {}
+                    hero_position_wins[hero_name] = {}
+
+                hero_position_matches[hero_name][pos_key] = (
+                    hero_position_matches[hero_name].get(pos_key, 0) + match_count
+                )
+                hero_position_wins[hero_name][pos_key] = hero_position_wins[hero_name].get(pos_key, 0) + win_count
+    # Now build the output with calculated rates using aggregated data
+    # Build unique set of heroes per position
+    heroes_by_position: dict[str, set[int]] = {}
     for position, heroes in stratz_api_data['data']['heroStats'].items():
         if position.startswith('heroesPos_'):
             pos_key = position.replace('heroesPos_', 'pos')
-            winrates[pos_key] = []
+            heroes_by_position[pos_key] = set()
+            for hero_day_data in heroes:
+                heroes_by_position[pos_key].add(hero_day_data['heroId'])
 
-            for hero in heroes:
-                hero_id = hero['heroId']
-                hero_name = ID_HERO_DICT.get(str(hero_id), 'Unknown Hero')
-                match_count = hero['matchCount']
-                win_count = hero['winCount']
+    # Build output using aggregated data
+    winrates = {}
+    for pos_key, hero_ids in heroes_by_position.items():
+        winrates[pos_key] = []
 
-                # Calculate winrate
-                winrate = f'{win_count / match_count:.3f}' if match_count > 0 else 'N/A'
+        for hero_id in hero_ids:
+            if hero_id not in [1]:
+                continue
+            hero_name = ID_HERO_DICT.get(str(hero_id), 'Unknown Hero')
 
-                # Calculate pick rate (hero total matches / bracket total matches)
-                hero_total = hero_total_matches.get(hero_name, 0)
-                pick_rate = f'{hero_total / total_bracket_matches:.3f}' if total_bracket_matches > 0 else '0.000'
+            # Get aggregated position-specific data
+            match_count = hero_position_matches.get(hero_name, {}).get(pos_key, 0)
+            win_count = hero_position_wins.get(hero_name, {}).get(pos_key, 0)
 
-                # Calculate position pick rates (position matches / hero total matches)
-                position_pick_rates = {}
-                for pos in ['pos1', 'pos2', 'pos3', 'pos4', 'pos5']:
-                    pos_matches = hero_position_matches.get(hero_name, {}).get(pos, 0)
-                    position_pick_rates[pos] = f'{pos_matches / hero_total:.3f}' if hero_total > 0 else '0.000'
+            # Calculate winrate using aggregated data
+            winrate = f'{win_count / match_count:.3f}' if match_count > 0 else 'N/A'
 
-                winrates[pos_key].append(
-                    {
-                        'name': hero_name,
-                        'matchCount': match_count,
-                        'winrate': winrate,
-                        'pickRate': pick_rate,
-                        'positionPickRates': position_pick_rates,
-                    }
-                )
+            # Calculate pick rate (hero total matches / bracket total matches)
+            hero_total = hero_total_matches.get(hero_name, 0)
+            pick_rate = f'{hero_total / total_bracket_matches:.3f}' if total_bracket_matches > 0 else '0.000'
+
+            # Calculate position pick rates (position matches / hero total matches)
+            position_pick_rates = {}
+            for pos in ['pos1', 'pos2', 'pos3', 'pos4', 'pos5']:
+                pos_matches = hero_position_matches.get(hero_name, {}).get(pos, 0)
+                position_pick_rates[pos] = f'{pos_matches / hero_total:.3f}' if hero_total > 0 else '0.000'
+
+            winrates[pos_key].append(
+                {
+                    'name': hero_name,
+                    'matchCount': match_count,
+                    'winrate': winrate,
+                    'pickRate': pick_rate,
+                    'positionPickRates': position_pick_rates,
+                }
+            )
 
     return winrates
 
@@ -667,8 +694,10 @@ def format_hero_winrates_all_brackets(token: str) -> dict[str, dict[str, list[di
         # Fetch total match count for the bracket
         match_count_data = get_all_heros_matchcount_for_bracket(token=token, bracket=bracket)
 
-        # Extract total bracket matches from the allHeroes field
-        total_bracket_matches = match_count_data['data']['heroStats']['allHeroes'][0]['matchCount'] / 10
+        # Extract and aggregate total bracket matches from the allHeroes field across 7 days
+        total_bracket_matches = (
+            sum(day_data['matchCount'] for day_data in match_count_data['data']['heroStats']['allHeroes']) / 10
+        )
 
         # Build the transformed data and store it with bracket name as key
         winrates[bracket] = build_hero_position_winrate_for_bracket(raw_data, total_bracket_matches)

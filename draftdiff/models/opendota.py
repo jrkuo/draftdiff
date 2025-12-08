@@ -126,8 +126,8 @@ class HeroMatchupsResponse(BaseModel):
 
 class HeroObjectResponse(BaseModel):
     id: int = Field(..., description='The ID value of the hero played')
-    name: str | None = Field(None, description='Dota hero command name', example='npc_dota_hero_antimage')
-    localized_name: str | None = Field(None, description='Hero name', example='Anti-Mage')
+    name: str | None = Field(None, description='Dota hero command name', examples=['npc_dota_hero_antimage'])
+    localized_name: str | None = Field(None, description='Hero name', examples=['Anti-Mage'])
     primary_attr: str | None = Field(None, description="Hero primary shorthand attribute name, e.g. 'agi'")
     attack_type: str | None = Field(None, description="Hero attack type, either 'Melee' or 'Ranged'")
     roles: list[str] | None = None
@@ -135,8 +135,8 @@ class HeroObjectResponse(BaseModel):
 
 class HeroStatsResponse(BaseModel):
     id: int | None = Field(None, description='The ID value of the hero played')
-    name: str | None = Field(None, description='Dota hero command name', example='npc_dota_hero_antimage')
-    localized_name: str | None = Field(None, description='Hero name', example='Anti-Mage')
+    name: str | None = Field(None, description='Dota hero command name', examples=['npc_dota_hero_antimage'])
+    localized_name: str | None = Field(None, description='Hero name', examples=['Anti-Mage'])
     primary_attr: str | None = Field(None, description='primary_attr')
     attack_type: str | None = Field(None, description='attack_type')
     roles: list[str] | None = Field(None, description='roles')
@@ -196,14 +196,14 @@ class LeagueObjectResponse(BaseModel):
     ticket: str | None = Field(None, description='ticket')
     banner: str | None = Field(None, description='banner')
     tier: str | None = Field(None, description='tier')
-    name: str | None = Field(None, description='League name', example='ASUS ROG DreamLeague Season 4')
+    name: str | None = Field(None, description='League name', examples=['ASUS ROG DreamLeague Season 4'])
 
 
 class MatchObjectResponse(BaseModel):
     match_id: int | None = Field(
         None,
         description='The ID number of the match assigned by Valve',
-        example=3703866531,
+        examples=[3703866531],
     )
     duration: int | None = Field(None, description='Duration of the game in seconds')
     start_time: int | None = Field(None, description='The Unix timestamp at which the game started')
@@ -315,7 +315,7 @@ class Player(BaseModel):
     match_id: int | None = Field(
         None,
         description='The ID number of the match assigned by Valve',
-        example=3703866531,
+        examples=[3703866531],
     )
     player_slot: int | None = Field(
         None,
@@ -493,7 +493,7 @@ class Player(BaseModel):
         description="Object containing information on the sources of this player's experience",
     )
     xp_t: list[int] | None = Field(None, description='Experience at each minute of the game')
-    personaname: str | None = Field(None, description="Player's Steam name", example='420 booty wizard')
+    personaname: str | None = Field(None, description="Player's Steam name", examples=['420 booty wizard'])
     name: str | None = Field(None, description='name')
     last_login: datetime | None = Field(None, description="Time of player's last login")
     radiant_win: bool | None = Field(None, description='Boolean indicating whether Radiant won the match')
@@ -576,7 +576,7 @@ class MatchResponse(BaseModel):
     match_id: int | None = Field(
         None,
         description='The ID number of the match assigned by Valve',
-        example=3703866531,
+        examples=[3703866531],
     )
     barracks_status_dire: int | None = Field(
         None,
@@ -680,7 +680,7 @@ class ParsedMatchesResponse(BaseModel):
     match_id: int | None = Field(
         None,
         description='The ID number of the match assigned by Valve',
-        example=3703866531,
+        examples=[3703866531],
     )
 
 
@@ -719,7 +719,7 @@ class PlayerMatchesResponse(BaseModel):
     match_id: int | None = Field(
         None,
         description='The ID number of the match assigned by Valve',
-        example=3703866531,
+        examples=[3703866531],
     )
     player_slot: int | None = Field(
         None,
@@ -761,7 +761,7 @@ class PlayerObjectResponse(BaseModel):
     avatarmedium: str | None = Field(None, description='Steam picture URL (medium picture)')
     avatarfull: str | None = Field(None, description='Steam picture URL (full picture)')
     profileurl: str | None = Field(None, description='Steam profile URL')
-    personaname: str | None = Field(None, description="Player's Steam name", example='420 booty wizard')
+    personaname: str | None = Field(None, description="Player's Steam name", examples=['420 booty wizard'])
     last_login: datetime | None = Field(None, description='Date and time of last login to OpenDota')
     full_history_time: datetime | None = Field(
         None,
@@ -774,7 +774,7 @@ class PlayerObjectResponse(BaseModel):
     country_code: str | None = Field(None, description="Player's country code")
     fantasy_role: int | None = Field(None, description="Player's ingame role (core: 1 or support: 2)")
     team_id: int | None = Field(None, description="Player's team identifier")
-    team_name: str | None = Field(None, description='Team name', example='Newbee')
+    team_name: str | None = Field(None, description='Team name', examples=['Newbee'])
     team_tag: str | None = Field(None, description="Player's team shorthand tag, e.g. 'EG'")
     is_locked: bool | None = Field(None, description='Whether the roster lock is active')
     is_pro: bool | None = Field(None, description='Whether the player is professional or not')
@@ -792,7 +792,7 @@ class PlayerPeersResponse(BaseModel):
     against_games: int | None = Field(None, description='against_games')
     with_gpm_sum: int | None = Field(None, description='with_gpm_sum')
     with_xpm_sum: int | None = Field(None, description='with_xpm_sum')
-    personaname: str | None = Field(None, description="Player's Steam name", example='420 booty wizard')
+    personaname: str | None = Field(None, description="Player's Steam name", examples=['420 booty wizard'])
     name: str | None = Field(None, description='name')
     is_contributor: bool | None = Field(None, description='is_contributor')
     is_subscriber: bool | None = Field(None, description='is_subscriber')
@@ -807,7 +807,7 @@ class PlayerProsResponse(BaseModel):
     country_code: str | None = Field(None, description='country_code')
     fantasy_role: int | None = Field(None, description='fantasy_role')
     team_id: int | None = Field(None, description='team_id')
-    team_name: str | None = Field(None, description='Team name', example='Newbee')
+    team_name: str | None = Field(None, description='Team name', examples=['Newbee'])
     team_tag: str | None = Field(None, description='team_tag')
     is_locked: bool | None = Field(None, description='is_locked')
     is_pro: bool | None = Field(None, description='is_pro')
@@ -845,7 +845,7 @@ class PlayerRatingsResponse(BaseModel):
     match_id: int | None = Field(
         None,
         description='The ID number of the match assigned by Valve',
-        example=3703866531,
+        examples=[3703866531],
     )
     solo_competitive_rank: int | None = Field(None, description='solo_competitive_rank')
     competitive_rank: int | None = Field(None, description='competitive_rank')
@@ -856,7 +856,7 @@ class PlayerRecentMatchesResponse(BaseModel):
     match_id: int | None = Field(
         None,
         description='The ID number of the match assigned by Valve',
-        example=3703866531,
+        examples=[3703866531],
     )
     player_slot: int | None = Field(
         None,
@@ -908,7 +908,7 @@ class PlayerRecentMatchesResponse(BaseModel):
 
 class Profile(BaseModel):
     account_id: int | None = Field(None, description='The player account ID')
-    personaname: str | None = Field(None, description="Player's Steam name", example='420 booty wizard')
+    personaname: str | None = Field(None, description="Player's Steam name", examples=['420 booty wizard'])
     name: str | None = Field(None, description='name')
     plus: bool | None = Field(None, description='Boolean indicating status of current Dota Plus subscription')
     cheese: int | None = Field(None, description='cheese')
@@ -959,7 +959,7 @@ class PublicMatchesResponse(BaseModel):
     match_id: int | None = Field(
         None,
         description='The ID number of the match assigned by Valve',
-        example=3703866531,
+        examples=[3703866531],
     )
     match_seq_num: int | None = Field(None, description='match_seq_num')
     radiant_win: bool | None = Field(None, description='Boolean indicating whether Radiant won the match')
@@ -982,7 +982,7 @@ class Ranking(BaseModel):
     avatarmedium: str | None = Field(None, description='avatarmedium')
     avatarfull: str | None = Field(None, description='avatarfull')
     profileurl: str | None = Field(None, description='profileurl')
-    personaname: str | None = Field(None, description="Player's Steam name", example='420 booty wizard')
+    personaname: str | None = Field(None, description="Player's Steam name", examples=['420 booty wizard'])
     last_login: datetime | None = Field(None, description='last_login')
     full_history_time: datetime | None = Field(None, description='full_history_time')
     cheese: int | None = Field(None, description='cheese')
@@ -1000,7 +1000,7 @@ class RecordsResponse(BaseModel):
     match_id: int | None = Field(
         None,
         description='The ID number of the match assigned by Valve',
-        example=3703866531,
+        examples=[3703866531],
     )
     start_time: int | None = Field(None, description='The Unix timestamp at which the game started')
     hero_id: int | None = Field(None, description='The ID value of the hero played')
@@ -1049,14 +1049,14 @@ class SchemaResponse(BaseModel):
 class SearchResponse(BaseModel):
     account_id: int | None = Field(None, description='The player account ID')
     avatarfull: str | None = Field(None, description='avatarfull')
-    personaname: str | None = Field(None, description="Player's Steam name", example='420 booty wizard')
+    personaname: str | None = Field(None, description="Player's Steam name", examples=['420 booty wizard'])
     last_match_time: str | None = Field(None, description='last_match_time. May not be present or null.')
     similarity: float | None = Field(None, description='similarity')
 
 
 class TeamHeroesResponse(BaseModel):
     hero_id: int | None = Field(None, description='The ID value of the hero played')
-    name: str | None = Field(None, description='Hero name', example='Anti-Mage')
+    name: str | None = Field(None, description='Hero name', examples=['Anti-Mage'])
     games_played: int | None = Field(None, description='Number of games played')
     wins: int | None = Field(None, description='Number of wins')
 
@@ -1065,7 +1065,7 @@ class TeamMatchObjectResponse(BaseModel):
     match_id: int | None = Field(
         None,
         description='The ID number of the match assigned by Valve',
-        example=3703866531,
+        examples=[3703866531],
     )
     radiant: bool | None = Field(None, description='Whether the team/player/hero was on Radiant')
     radiant_win: bool | None = Field(None, description='Boolean indicating whether Radiant won the match')
@@ -1087,7 +1087,7 @@ class TeamObjectResponse(BaseModel):
     wins: int | None = Field(None, description='The number of games won by this team')
     losses: int | None = Field(None, description='The number of losses by this team')
     last_match_time: int | None = Field(None, description='The Unix timestamp of the last match played by this team')
-    name: str | None = Field(None, description='Team name', example='Newbee')
+    name: str | None = Field(None, description='Team name', examples=['Newbee'])
     tag: str | None = Field(None, description='The team tag/abbreviation')
 
 
